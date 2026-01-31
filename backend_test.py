@@ -715,13 +715,13 @@ class AssetProductAPITester:
                 print(f"✅ Passed - Status: {response.status_code}")
                 
                 result = response.json()
-                if 'asset' in result and 'ai_analysis' in result:
-                    print(f"   Asset created: {result['asset']['name']}")
-                    print(f"   AI analysis: {result['ai_analysis'].get('category', 'N/A')}")
+                if 'entity' in result and 'ai_analysis' in result:
+                    print(f"   Entity created: {result['entity']['name']}")
+                    print(f"   AI analysis: {result['ai_analysis'].get('name', 'N/A')}")
                     
-                    # Store created asset for cleanup
-                    asset_id = result['asset']['id']
-                    self.created_items['assets'].append(asset_id)
+                    # Store created entity for cleanup
+                    entity_id = result['entity']['id']
+                    self.created_items['assets'].append(entity_id)
                     
                     return True
                 else:
