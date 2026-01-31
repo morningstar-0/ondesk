@@ -1,25 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
@@ -47,11 +33,7 @@ const CustomFieldsLibraryPage = () => {
   });
   const [newOption, setNewOption] = useState('');
 
-  useEffect(() => {
-    fetchFields();
-  }, []);
-
-  const fetchFields = async () => {
+  const fetchFields = useCallback(async () => {
     try {
       const response = await api.get('/custom-fields');
       setFields(response.data);
@@ -60,7 +42,11 @@ const CustomFieldsLibraryPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
+
+  useEffect(() => {
+    fetchFields();
+  }, [fetchFields]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,7 +107,7 @@ const CustomFieldsLibraryPage = () => {
     setFormData({ ...formData, options: formData.options.filter(o => o !== opt) });
   };
 
-  const showOptions = ['select', 'multiselect'].includes(formData.field_type);
+  const showOptions = formData.field_type === 'select' || formData.field_type === 'multiselect';
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="custom-fields-page">
@@ -150,7 +136,7 @@ const CustomFieldsLibraryPage = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
-                [...Array(5)].map((_, i) => (
+                [1,2,3,4,5].map((i) => (
                   <TableRow key={i}>
                     <TableCell colSpan={5}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
                   </TableRow>
@@ -264,14 +250,14 @@ const CustomFieldsLibraryPage = () => {
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
                     placeholder="Add option..."
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
+                    onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOption(); }}}
                     data-testid="field-option-input"
                   />
                   <Button type="button" variant="outline" onClick={addOption}>Add</Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.options.map((opt, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
+                  {formData.options.map((opt) => (
+                    <Badge key={opt} variant="secondary" className="gap-1">
                       {opt}
                       <X className="h-3 w-3 cursor-pointer" onClick={() => removeOption(opt)} />
                     </Badge>
