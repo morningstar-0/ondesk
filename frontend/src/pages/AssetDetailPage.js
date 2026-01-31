@@ -176,43 +176,34 @@ const AssetDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background" data-testid="asset-detail-page">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background border-b">
-        <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/assets')}>
-              <ArrowLeft className="h-5 w-5" />
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title={isNew ? 'New Asset' : formData.name || 'Asset'}
+        subtitle={!isNew ? formData.code : null}
+        backPath="/assets"
+        backLabel="Assets"
+        badge={formData.status && !isNew && (
+          <Badge variant={formData.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+            {formData.status}
+          </Badge>
+        )}
+      >
+        {!isNew && (
+          <>
+            <Button variant="outline" size="sm" onClick={handleConvertToProduct} className="gap-2">
+              <ArrowRightLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Convert to Product</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold font-['Public_Sans']">
-                {isNew ? 'New Asset' : formData.name || 'Asset'}
-              </h1>
-              {!isNew && <p className="text-sm text-muted-foreground font-mono">{formData.code}</p>}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.open(window.location.href, '_blank')}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Open in New Tab
+            <Button variant="destructive" size="icon" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4" />
             </Button>
-            {!isNew && (
-              <>
-                <Button variant="outline" onClick={handleConvertToProduct}>
-                  <ArrowRightLeft className="mr-2 h-4 w-4" />
-                  Convert to Product
-                </Button>
-                <Button variant="destructive" size="icon" onClick={handleDelete}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-            <Button onClick={handleSave} disabled={saving} data-testid="save-asset-btn">
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+        <Button onClick={handleSave} disabled={saving} data-testid="save-asset-btn" className="gap-2">
+          <Save className="h-4 w-4" />
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </FullScreenHeader>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-6">
