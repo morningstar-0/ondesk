@@ -332,14 +332,25 @@ class AssetProductAPITester:
         return success
 
     def test_assets_crud(self):
-        """Test Assets CRUD operations"""
-        # Create asset
+        """Test Assets CRUD operations with new enhanced fields"""
+        # Create asset with new enhanced fields
         asset_data = {
+            "code": "TST-AST-001",
             "name": "Test Asset",
-            "sku": "TST-AST-001",
             "description": "Test asset description",
-            "category": "test-category",
-            "status": "draft"
+            "division_id": "",
+            "product_type_id": "",
+            "product_subtype_id": "",
+            "tags": ["test", "sample"],
+            "color_ids": [],
+            "size_ids": [],
+            "supplier_id": "",
+            "status": "draft",
+            "primary_image_url": "",
+            "media": [],
+            "custom_fields": {},
+            "bom": [],
+            "measurements": []
         }
         
         success, response = self.run_test(
