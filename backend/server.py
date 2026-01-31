@@ -203,6 +203,49 @@ class SeasonResponse(BaseModel):
     year: int
     created_at: str
 
+# POM (Points of Measurement) Library
+class POMCreate(BaseModel):
+    name: str
+    code: str
+    description: Optional[str] = ""
+    category: Optional[str] = "general"  # tops, bottoms, footwear, accessories
+    unit: Optional[str] = "cm"
+    sort_order: Optional[int] = 0
+
+class POMResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str = ""
+    code: str = ""
+    description: str = ""
+    category: str = "general"
+    unit: str = "cm"
+    sort_order: int = 0
+    created_at: str = ""
+
+# Code Configuration
+class CodeConfigCreate(BaseModel):
+    entity_type: str  # asset, product, material, color
+    prefix: str
+    separator: str = "-"
+    include_date: bool = False
+    date_format: str = "YYMMDD"
+    sequence_digits: int = 4
+    sequence_start: int = 1
+
+class CodeConfigResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    entity_type: str = ""
+    prefix: str = ""
+    separator: str = "-"
+    include_date: bool = False
+    date_format: str = "YYMMDD"
+    sequence_digits: int = 4
+    sequence_start: int = 1
+    current_sequence: int = 1
+    updated_at: str = ""
+
 class MediaItem(BaseModel):
     id: str
     url: str
