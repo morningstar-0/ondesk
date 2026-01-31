@@ -105,7 +105,7 @@ Create a tenant-based asset and product management software with:
 
 ### P1 (Important) - UPCOMING
 - [ ] Enhanced Media Upload Panel (drag-drop, copy-paste, multi-file)
-- [ ] Product sub-tabs (Colors, Sizes, SKU Codes, Barcodes) - partially done
+- [ ] Use auto-generated codes when creating new entities
 
 ### P2 (Nice to Have)
 - [ ] Bulk import/export functionality
