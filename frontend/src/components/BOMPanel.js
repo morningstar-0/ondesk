@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Plus, Trash2, Package, DollarSign, Calculator } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Plus, Trash2, Package, Calculator, Pencil } from 'lucide-react';
 
 const units = ['meter', 'yard', 'kg', 'lb', 'piece', 'roll', 'sheet', 'sqm', 'sqft'];
 
@@ -19,6 +19,8 @@ const BOMPanel = ({ bom = [], onChange, materials = [], readOnly = false }) => {
     unit: 'meter',
     notes: ''
   });
+  const [activeCell, setActiveCell] = useState(null);
+  const inputRefs = useRef({});
 
   const resetForm = () => {
     setFormData({
@@ -77,15 +79,52 @@ const BOMPanel = ({ bom = [], onChange, materials = [], readOnly = false }) => {
     resetForm();
   };
 
-  const handleDelete = (itemId) => {
+  const handleDelete = (itemId, e) => {
+    e?.stopPropagation();
     onChange(bom.filter(item => item.id !== itemId));
+  };
+
+  const handleInlineQuantityChange = (itemId, newQty) => {
+    const updatedBom = bom.map(item => {
+      if (item.id === itemId) {
+        const quantity = parseFloat(newQty) || 0;
+        return {
+          ...item,
+          quantity,
+          total_cost: item.unit_cost * quantity
+        };
+      }
+      return item;
+    });
+    onChange(updatedBom);
+  };
+
+  const handleKeyDown = (e, rowIndex, itemId) => {
+    if (e.key === 'ArrowUp' && rowIndex > 0) {
+      e.preventDefault();
+      const prevItem = bom[rowIndex - 1];
+      inputRefs.current[prevItem.id]?.focus();
+      inputRefs.current[prevItem.id]?.select();
+    } else if (e.key === 'ArrowDown' && rowIndex < bom.length - 1) {
+      e.preventDefault();
+      const nextItem = bom[rowIndex + 1];
+      inputRefs.current[nextItem.id]?.focus();
+      inputRefs.current[nextItem.id]?.select();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (rowIndex < bom.length - 1) {
+        const nextItem = bom[rowIndex + 1];
+        inputRefs.current[nextItem.id]?.focus();
+        inputRefs.current[nextItem.id]?.select();
+      }
+    }
   };
 
   const totalBomCost = bom.reduce((sum, item) => sum + (item.total_cost || 0), 0);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3 bg-muted/30">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -100,21 +139,24 @@ const BOMPanel = ({ bom = [], onChange, materials = [], readOnly = false }) => {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Material</TableHead>
-              <TableHead className="w-[100px]">Qty</TableHead>
-              <TableHead className="w-[80px]">Unit</TableHead>
-              <TableHead className="w-[100px] text-right">Unit Cost</TableHead>
-              <TableHead className="w-[100px] text-right">Total</TableHead>
-              {!readOnly && <TableHead className="w-[60px]" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <div className="ag-grid-wrapper">
+          {/* AG Grid-like header */}
+          <div className="ag-header">
+            <div className="ag-header-row">
+              <div className="ag-header-cell ag-header-cell-material">Material</div>
+              <div className="ag-header-cell ag-header-cell-qty">Qty</div>
+              <div className="ag-header-cell ag-header-cell-unit">Unit</div>
+              <div className="ag-header-cell ag-header-cell-cost">Unit Cost</div>
+              <div className="ag-header-cell ag-header-cell-total">Total</div>
+              {!readOnly && <div className="ag-header-cell ag-header-cell-actions" />}
+            </div>
+          </div>
+
+          {/* AG Grid-like body */}
+          <div className="ag-body">
             {bom.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={readOnly ? 5 : 6} className="h-24 text-center">
+              <div className="ag-row ag-row-empty">
+                <div className="p-8 text-center w-full">
                   <Package className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">No materials added</p>
                   {materials.length === 0 && (
@@ -122,69 +164,102 @@ const BOMPanel = ({ bom = [], onChange, materials = [], readOnly = false }) => {
                       Add materials to your library first
                     </p>
                   )}
-                </TableCell>
-              </TableRow>
+                </div>
+              </div>
             ) : (
               <>
-                {bom.map((item) => (
-                  <TableRow 
+                {bom.map((item, rowIndex) => (
+                  <div 
                     key={item.id} 
-                    className={!readOnly ? "cursor-pointer hover:bg-muted/50" : ""}
-                    onClick={() => !readOnly && openEditDialog(item)}
+                    className={`ag-row ${rowIndex % 2 === 0 ? 'ag-row-even' : 'ag-row-odd'} ${!readOnly ? 'cursor-pointer' : ''}`}
                   >
-                    <TableCell>
-                      <div>
+                    <div className="ag-cell ag-cell-material" onClick={() => !readOnly && openEditDialog(item)}>
+                      <div className="flex flex-col">
                         <span className="font-medium">{item.material_name}</span>
-                        <span className="text-xs text-muted-foreground ml-2 font-mono">
+                        <span className="text-xs text-muted-foreground font-mono">
                           {item.material_code}
                         </span>
+                        {item.notes && (
+                          <span className="text-xs text-muted-foreground italic mt-0.5">{item.notes}</span>
+                        )}
                       </div>
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
+                    </div>
+                    <div className={`ag-cell ag-cell-qty ${activeCell === item.id ? 'ag-cell-active' : ''}`}>
+                      {readOnly ? (
+                        <span className="font-mono">{item.quantity}</span>
+                      ) : (
+                        <Input
+                          ref={(el) => { inputRefs.current[item.id] = el; }}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="ag-cell-input"
+                          value={item.quantity}
+                          onChange={(e) => handleInlineQuantityChange(item.id, e.target.value)}
+                          onFocus={() => setActiveCell(item.id)}
+                          onBlur={() => setActiveCell(null)}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, item.id)}
+                        />
                       )}
-                    </TableCell>
-                    <TableCell className="font-mono">{item.quantity}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.unit}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      ${item.unit_cost?.toFixed(2) || '0.00'}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium">
-                      ${item.total_cost?.toFixed(2) || '0.00'}
-                    </TableCell>
+                    </div>
+                    <div className="ag-cell ag-cell-unit">
+                      <Badge variant="outline" className="text-xs">{item.unit}</Badge>
+                    </div>
+                    <div className="ag-cell ag-cell-cost">
+                      <span className="font-mono text-sm">${item.unit_cost?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="ag-cell ag-cell-total">
+                      <span className="font-mono font-medium">${item.total_cost?.toFixed(2) || '0.00'}</span>
+                    </div>
                     {!readOnly && (
-                      <TableCell>
+                      <div className="ag-cell ag-cell-actions">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(item.id);
-                          }}
+                          className="h-7 w-7 mr-1"
+                          onClick={(e) => { e.stopPropagation(); openEditDialog(item); }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => handleDelete(item.id, e)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
-                      </TableCell>
+                      </div>
                     )}
-                  </TableRow>
+                  </div>
                 ))}
+                
                 {/* Total Row */}
-                <TableRow className="bg-muted/50 font-medium">
-                  <TableCell colSpan={4} className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                <div className="ag-row ag-row-total">
+                  <div className="ag-cell ag-cell-material" />
+                  <div className="ag-cell ag-cell-qty" />
+                  <div className="ag-cell ag-cell-unit" />
+                  <div className="ag-cell ag-cell-cost">
+                    <div className="flex items-center gap-2 font-medium">
                       <Calculator className="h-4 w-4" />
-                      Total BOM Cost
+                      Total
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-lg">
-                    ${totalBomCost.toFixed(2)}
-                  </TableCell>
-                  {!readOnly && <TableCell />}
-                </TableRow>
+                  </div>
+                  <div className="ag-cell ag-cell-total">
+                    <span className="font-mono font-bold text-lg">${totalBomCost.toFixed(2)}</span>
+                  </div>
+                  {!readOnly && <div className="ag-cell ag-cell-actions" />}
+                </div>
               </>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
+
+        {bom.length > 0 && (
+          <div className="px-4 py-2 border-t bg-muted/30 text-xs text-muted-foreground">
+            Use arrow keys to navigate • Edit quantity inline • Click row to edit details
+          </div>
+        )}
       </CardContent>
 
       {/* Add/Edit Dialog */}
@@ -295,6 +370,121 @@ const BOMPanel = ({ bom = [], onChange, materials = [], readOnly = false }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <style jsx>{`
+        .ag-grid-wrapper {
+          font-size: 13px;
+        }
+        .ag-header {
+          background: hsl(var(--muted));
+          border-bottom: 1px solid hsl(var(--border));
+          font-weight: 600;
+        }
+        .ag-header-row {
+          display: flex;
+          height: 40px;
+        }
+        .ag-header-cell {
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          border-right: 1px solid hsl(var(--border));
+        }
+        .ag-header-cell-material {
+          flex: 2;
+          min-width: 200px;
+        }
+        .ag-header-cell-qty {
+          width: 100px;
+          justify-content: center;
+        }
+        .ag-header-cell-unit {
+          width: 80px;
+          justify-content: center;
+        }
+        .ag-header-cell-cost {
+          width: 100px;
+          justify-content: flex-end;
+        }
+        .ag-header-cell-total {
+          width: 100px;
+          justify-content: flex-end;
+        }
+        .ag-header-cell-actions {
+          width: 80px;
+        }
+        .ag-body {
+          overflow-x: auto;
+        }
+        .ag-row {
+          display: flex;
+          min-height: 48px;
+          border-bottom: 1px solid hsl(var(--border));
+          transition: background 0.1s;
+        }
+        .ag-row-even {
+          background: hsl(var(--background));
+        }
+        .ag-row-odd {
+          background: hsl(var(--muted) / 0.3);
+        }
+        .ag-row:hover:not(.ag-row-total):not(.ag-row-empty) {
+          background: hsl(var(--accent));
+        }
+        .ag-row-total {
+          background: hsl(var(--muted) / 0.5);
+          font-weight: 600;
+        }
+        .ag-row-empty {
+          justify-content: center;
+        }
+        .ag-cell {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          border-right: 1px solid hsl(var(--border) / 0.5);
+        }
+        .ag-cell-material {
+          flex: 2;
+          min-width: 200px;
+        }
+        .ag-cell-qty {
+          width: 100px;
+          justify-content: center;
+        }
+        .ag-cell-unit {
+          width: 80px;
+          justify-content: center;
+        }
+        .ag-cell-cost {
+          width: 100px;
+          justify-content: flex-end;
+        }
+        .ag-cell-total {
+          width: 100px;
+          justify-content: flex-end;
+        }
+        .ag-cell-actions {
+          width: 80px;
+          justify-content: center;
+        }
+        .ag-cell-active {
+          box-shadow: inset 0 0 0 2px hsl(var(--primary));
+        }
+        .ag-cell-input {
+          height: 32px;
+          width: 80px;
+          text-align: center;
+          font-family: monospace;
+          border: 1px solid transparent;
+          background: transparent;
+        }
+        .ag-cell-input:focus {
+          outline: none;
+          background: hsl(var(--background));
+          border-color: hsl(var(--border));
+        }
+      `}</style>
     </Card>
   );
 };
