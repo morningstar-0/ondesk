@@ -420,16 +420,32 @@ class AssetProductAPITester:
         return success
 
     def test_products_crud(self):
-        """Test Products CRUD operations"""
-        # Create product
+        """Test Products CRUD operations with enhanced fields"""
+        # Create product with enhanced fields
         product_data = {
+            "code": "TST-PRD-001",
             "name": "Test Product",
-            "sku": "TST-PRD-001",
             "description": "Test product description",
-            "category": "test-category",
+            "division_id": "",
+            "product_type_id": "",
+            "product_subtype_id": "",
+            "material_description": "Cotton blend fabric",
+            "buyer_ids": [],
+            "supplier_id": "",
+            "season_id": "",
+            "lifecycle_stage": "concept",
+            "notes": "Test product notes",
+            "tags": ["test", "product"],
+            "color_ids": [],
+            "size_ids": [],
+            "sku_variants": [],
             "status": "draft",
-            "price": 99.99,
-            "cost": 50.00
+            "primary_image_url": "",
+            "media": [],
+            "custom_fields": {},
+            "bom": [],
+            "measurements": [],
+            "source_asset_id": ""
         }
         
         success, response = self.run_test(
