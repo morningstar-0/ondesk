@@ -347,7 +347,7 @@ async def register(user: UserCreate):
     tenant_db = get_tenant_db(tenant_id)
     await tenant_db.settings.insert_one({
         "id": str(uuid.uuid4()),
-        "company_name": user_doc.get("name", "") + "'s Company",
+        "company_name": user.name + "'s Company",
         "logo_url": "",
         "default_currency": "USD",
         "date_format": "YYYY-MM-DD",
