@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   Boxes,
   ShoppingBag,
+  Layers,
   Palette,
   Ruler,
   FileText,
