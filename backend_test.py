@@ -927,6 +927,7 @@ def main():
         # Test main entities
         tester.test_assets_crud()
         tester.test_products_crud()
+        tester.test_materials_crud()
         
         # Test conversion feature
         tester.test_convert_asset_to_product()
