@@ -1,0 +1,193 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "Creative Designer",
+    "principles": [
+      "Fusion over Imitation",
+      "Emotion First",
+      "Content is King",
+      "Zoom In",
+      "Negative Space",
+      "Contrast"
+    ]
+  },
+  "project": {
+    "name": "Tenant-Based Asset & Product Management",
+    "type": "B2B SaaS / Dashboard",
+    "audience": "Design Teams, Product Managers, Manufacturers",
+    "tone": "Professional, Architectural, Precision, Organized",
+    "theme_strategy": "Light Mode Primary (Data-Heavy) with Dark Mode Toggle"
+  },
+  "typography": {
+    "headings": {
+      "family": "Public Sans, sans-serif",
+      "weights": ["600", "700", "800"],
+      "usage": "Main page titles, section headers, modal titles. Tracking tight.",
+      "import_url": "https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap"
+    },
+    "body": {
+      "family": "Inter, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "General text, table data, form labels.",
+      "import_url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "weights": ["400", "500"],
+      "usage": "SKUs, IDs, Code snippets, Technical specs.",
+      "import_url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+    }
+  },
+  "colors": {
+    "palette_name": "Slate & Violet (The Creative Architect)",
+    "light_mode": {
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0F172A",
+      "primary": "#7C3AED",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F1F5F9",
+      "secondary_foreground": "#0F172A",
+      "muted": "#F1F5F9",
+      "muted_foreground": "#64748B",
+      "accent": "#F1F5F9",
+      "accent_foreground": "#0F172A",
+      "destructive": "#EF4444",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#E2E8F0",
+      "input": "#E2E8F0",
+      "ring": "#7C3AED"
+    },
+    "dark_mode": {
+      "background": "#020617",
+      "foreground": "#F8FAFC",
+      "card": "#0F172A",
+      "card_foreground": "#F8FAFC",
+      "primary": "#8B5CF6",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#1E293B",
+      "secondary_foreground": "#F8FAFC",
+      "muted": "#1E293B",
+      "muted_foreground": "#94A3B8",
+      "accent": "#1E293B",
+      "accent_foreground": "#F8FAFC",
+      "destructive": "#7F1D1D",
+      "destructive_foreground": "#F8FAFC",
+      "border": "#1E293B",
+      "input": "#1E293B",
+      "ring": "#8B5CF6"
+    },
+    "chart_colors": [
+      "#7C3AED",
+      "#10B981",
+      "#F59E0B",
+      "#3B82F6",
+      "#EC4899"
+    ]
+  },
+  "layout_strategies": {
+    "dashboard": {
+      "type": "Bento Grid (Mode B: High Density)",
+      "grid_cols": "grid-cols-1 md:grid-cols-4 lg:grid-cols-4",
+      "gap": "gap-4",
+      "rules": [
+        "Summary cards: col-span-1",
+        "Main Chart: col-span-2 row-span-2",
+        "Activity Feed: col-span-1 row-span-2",
+        "Use h-full on all children to ensure alignment"
+      ]
+    },
+    "lists_tables": {
+      "style": "Dense, Sticky Header",
+      "features": [
+        "Fixed headers for vertical scrolling",
+        "Resizable columns",
+        "Zebra striping for readability (optional)",
+        "Inline editing for quick updates",
+        "Row expansion (accordion) for BOM/Measurement details"
+      ]
+    },
+    "forms": {
+      "style": "Split Screen",
+      "layout": "Left: Form Inputs (Scrollable) | Right: Live Preview / Context (Sticky)",
+      "spacing": "Generous padding (p-8) inside containers"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "usage": "Sticky Headers, Floating Actions",
+      "classes": "bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-border/50"
+    },
+    "tracing_beam": {
+      "usage": "Active Cards, Pricing Tiers",
+      "description": "Subtle glowing border gradient on hover/active state"
+    },
+    "shadows": {
+      "card": "shadow-sm hover:shadow-md transition-shadow duration-200",
+      "dropdown": "shadow-lg border border-border/50"
+    },
+    "borders": {
+      "default": "border border-border",
+      "subtle": "border-b border-border/40"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      "ghost": "hover:bg-accent hover:text-accent-foreground",
+      "radius": "rounded-md"
+    },
+    "cards": {
+      "style": "Flat with subtle border, no shadow by default. Hover lifts slightly.",
+      "classes": "bg-card text-card-foreground border border-border rounded-lg"
+    },
+    "inputs": {
+      "style": "Minimal, focus ring matches primary color.",
+      "classes": "bg-transparent border-input focus:ring-2 focus:ring-ring focus:border-transparent"
+    }
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjBhcmNoaXRlY3R1cmV8ZW58MHx8fHwxNzY5ODg1NjMyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Modern office hallway architecture",
+      "usage": "Login page background, split screen cover"
+    },
+    "product_placeholder": {
+      "url": "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBjaGFpcnxlbnwwfHx8fDE3Njk4ODU2MjV8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Modern gray and white padded chair",
+      "usage": "Default image for new products"
+    },
+    "user_avatar": {
+      "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc2OTg3Nzg1MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Professional male headshot",
+      "usage": "Default user avatar"
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5px for elegance, 2px for active states"
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-in-out",
+    "hover_lift": "hover:-translate-y-0.5",
+    "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+  },
+  "accessibility": {
+    "contrast": "Ensure 4.5:1 for normal text, 3:1 for large text.",
+    "focus_states": "Visible focus rings on all interactive elements.",
+    "aria": "Use aria-labels for icon-only buttons."
+  },
+  "universal_guidelines": [
+    "Do not use gradients for text or backgrounds unless specified.",
+    "Avoid 'Inter' for headings; use 'Public Sans'.",
+    "Use 'JetBrains Mono' for all technical data (IDs, SKUs).",
+    "Ensure all interactive elements have a data-testid.",
+    "Use 'sonner' for toasts.",
+    "Use 'lucide-react' for icons.",
+    "Do not center-align main app container.",
+    "Use 2-3x more spacing than typical designs."
+  ],
+  "instructions_to_main_agent": "Follow these guidelines strictly. Use the provided image URLs for placeholders. Implement the 'Slate & Violet' theme using Tailwind CSS variables. Prioritize the 'Bento' grid layout for the dashboard and dense tables for data lists."
+}
