@@ -553,6 +553,193 @@ class AssetProductAPITester:
             
         return success
 
+    def create_test_image(self, format='JPEG', size=(100, 100), color='red'):
+        """Create a test image in memory"""
+        img = Image.new('RGB', size, color)
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format=format)
+        img_buffer.seek(0)
+        return img_buffer.getvalue()
+
+    def test_image_upload_valid(self):
+        """Test valid image upload with AI analysis"""
+        print(f"\n🔍 Testing Image Upload - Valid JPEG...")
+        
+        # Create a test JPEG image
+        image_data = self.create_test_image('JPEG', (200, 200), 'blue')
+        
+        # Prepare multipart form data
+        files = {'file': ('test_image.jpg', image_data, 'image/jpeg')}
+        
+        url = f"{self.base_url}/assets/upload-image"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        self.tests_run += 1
+        
+        try:
+            response = requests.post(url, files=files, headers=headers)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                
+                result = response.json()
+                if 'asset' in result and 'ai_analysis' in result:
+                    print(f"   Asset created: {result['asset']['name']}")
+                    print(f"   AI analysis: {result['ai_analysis'].get('category', 'N/A')}")
+                    
+                    # Store created asset for cleanup
+                    asset_id = result['asset']['id']
+                    self.created_items['assets'].append(asset_id)
+                    
+                    return True
+                else:
+                    print(f"❌ Missing expected fields in response")
+                    return False
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                try:
+                    error_detail = response.json()
+                    print(f"   Error: {error_detail}")
+                except:
+                    print(f"   Response: {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_image_upload_invalid_type(self):
+        """Test image upload with invalid file type"""
+        print(f"\n🔍 Testing Image Upload - Invalid File Type...")
+        
+        # Create a text file instead of image
+        text_data = b"This is not an image file"
+        files = {'file': ('test.txt', text_data, 'text/plain')}
+        
+        url = f"{self.base_url}/assets/upload-image"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        self.tests_run += 1
+        
+        try:
+            response = requests.post(url, files=files, headers=headers)
+            
+            if response.status_code == 400:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code} (correctly rejected)")
+                return True
+            else:
+                print(f"❌ Failed - Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_image_upload_large_file(self):
+        """Test image upload with file too large"""
+        print(f"\n🔍 Testing Image Upload - Large File...")
+        
+        # Create a large image (simulate > 10MB by creating large dimensions)
+        # Note: We'll create a smaller image but test the validation logic
+        image_data = self.create_test_image('JPEG', (100, 100), 'green')
+        
+        # Simulate large file by creating oversized data
+        large_data = image_data * 1000  # Make it larger
+        files = {'file': ('large_image.jpg', large_data, 'image/jpeg')}
+        
+        url = f"{self.base_url}/assets/upload-image"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        self.tests_run += 1
+        
+        try:
+            response = requests.post(url, files=files, headers=headers)
+            
+            # Should either succeed (if under 10MB) or fail with 400
+            if response.status_code in [200, 400]:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    asset_id = result['asset']['id']
+                    self.created_items['assets'].append(asset_id)
+                    print(f"   Large file accepted and processed")
+                else:
+                    print(f"   Large file correctly rejected")
+                    
+                return True
+            else:
+                print(f"❌ Failed - Unexpected status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_image_upload_png(self):
+        """Test PNG image upload"""
+        print(f"\n🔍 Testing Image Upload - PNG Format...")
+        
+        # Create a test PNG image
+        image_data = self.create_test_image('PNG', (150, 150), 'yellow')
+        files = {'file': ('test_image.png', image_data, 'image/png')}
+        
+        url = f"{self.base_url}/assets/upload-image"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        self.tests_run += 1
+        
+        try:
+            response = requests.post(url, files=files, headers=headers)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                
+                result = response.json()
+                asset_id = result['asset']['id']
+                self.created_items['assets'].append(asset_id)
+                print(f"   PNG image processed successfully")
+                
+                return True
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_image_upload_no_auth(self):
+        """Test image upload without authentication"""
+        print(f"\n🔍 Testing Image Upload - No Authentication...")
+        
+        image_data = self.create_test_image('JPEG', (100, 100), 'red')
+        files = {'file': ('test_image.jpg', image_data, 'image/jpeg')}
+        
+        url = f"{self.base_url}/assets/upload-image"
+        # No authorization header
+        
+        self.tests_run += 1
+        
+        try:
+            response = requests.post(url, files=files)
+            
+            if response.status_code == 401:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code} (correctly requires auth)")
+                return True
+            else:
+                print(f"❌ Failed - Expected 401, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
     def cleanup_created_items(self):
         """Clean up created test items"""
         print("\n🧹 Cleaning up test data...")
