@@ -809,6 +809,17 @@ def main():
         # Test AI generation
         tester.test_ai_generation()
         
+        # Test image upload functionality
+        print("\n" + "=" * 40)
+        print("🖼️ Testing Image Upload Features")
+        print("=" * 40)
+        
+        tester.test_image_upload_valid()
+        tester.test_image_upload_png()
+        tester.test_image_upload_invalid_type()
+        tester.test_image_upload_large_file()
+        tester.test_image_upload_no_auth()
+        
         # Clean up
         tester.cleanup_created_items()
         
