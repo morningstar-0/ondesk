@@ -474,6 +474,8 @@ const ProductDetailPage = () => {
                 <TabsTrigger value="colors">Colors & Sizes</TabsTrigger>
                 <TabsTrigger value="skus">SKU Codes</TabsTrigger>
                 <TabsTrigger value="barcodes">Barcodes</TabsTrigger>
+                <TabsTrigger value="bom">BOM</TabsTrigger>
+                <TabsTrigger value="measurements">Measurements</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
               </TabsList>
 
