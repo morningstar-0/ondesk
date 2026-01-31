@@ -346,14 +346,14 @@ const AssetDetailPage = () => {
                   <div className="space-y-2">
                     <Label>Division</Label>
                     <Select
-                      value={formData.division_id}
-                      onValueChange={(value) => setFormData({ ...formData, division_id: value })}
+                      value={formData.division_id || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, division_id: value === "__none__" ? "" : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select division" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {divisions.map(d => (
                           <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                         ))}
@@ -363,14 +363,14 @@ const AssetDetailPage = () => {
                   <div className="space-y-2">
                     <Label>Product Type</Label>
                     <Select
-                      value={formData.product_type_id}
-                      onValueChange={(value) => setFormData({ ...formData, product_type_id: value })}
+                      value={formData.product_type_id || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, product_type_id: value === "__none__" ? "" : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {productTypes.filter(t => !t.parent_id).map(t => (
                           <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                         ))}
@@ -380,14 +380,14 @@ const AssetDetailPage = () => {
                   <div className="space-y-2">
                     <Label>Product Subtype</Label>
                     <Select
-                      value={formData.product_subtype_id}
-                      onValueChange={(value) => setFormData({ ...formData, product_subtype_id: value })}
+                      value={formData.product_subtype_id || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, product_subtype_id: value === "__none__" ? "" : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select subtype" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {productTypes.filter(t => t.parent_id === formData.product_type_id).map(t => (
                           <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                         ))}
@@ -487,14 +487,14 @@ const AssetDetailPage = () => {
                   <CardContent className="pt-6">
                     <Label>Supplier</Label>
                     <Select
-                      value={formData.supplier_id}
-                      onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                      value={formData.supplier_id || "__none__"}
+                      onValueChange={(value) => setFormData({ ...formData, supplier_id: value === "__none__" ? "" : value })}
                     >
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Select supplier" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {suppliers.map(s => (
                           <SelectItem key={s.id} value={s.id}>{s.name} ({s.code})</SelectItem>
                         ))}
