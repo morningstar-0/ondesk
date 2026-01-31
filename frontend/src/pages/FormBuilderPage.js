@@ -1,32 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, FileText, Layers, GripVertical, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Layers, GripVertical, X } from 'lucide-react';
 
 const FormBuilderPage = () => {
   const { api } = useAuth();
@@ -42,12 +27,7 @@ const FormBuilderPage = () => {
     is_default: false
   });
 
-  useEffect(() => {
-    fetchLayouts();
-    fetchCustomFields();
-  }, []);
-
-  const fetchLayouts = async () => {
+  const fetchLayouts = useCallback(async () => {
     try {
       const response = await api.get('/form-layouts');
       setLayouts(response.data);
@@ -56,16 +36,21 @@ const FormBuilderPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
-  const fetchCustomFields = async () => {
+  const fetchCustomFields = useCallback(async () => {
     try {
       const response = await api.get('/custom-fields');
       setCustomFields(response.data);
     } catch (error) {
       console.error('Failed to fetch custom fields:', error);
     }
-  };
+  }, [api]);
+
+  useEffect(() => {
+    fetchLayouts();
+    fetchCustomFields();
+  }, [fetchLayouts, fetchCustomFields]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,31 +103,33 @@ const FormBuilderPage = () => {
   };
 
   const addSection = () => {
+    const currentSections = formData.layout.sections || [];
     setFormData({
       ...formData,
       layout: {
         ...formData.layout,
-        sections: [...(formData.layout.sections || []), { name: 'New Section', fields: [] }]
+        sections: [...currentSections, { name: 'New Section', fields: [] }]
       }
     });
   };
 
-  const updateSection = (index, section) => {
+  const updateSectionName = (index, name) => {
     const sections = [...formData.layout.sections];
-    sections[index] = section;
+    sections[index] = { ...sections[index], name };
     setFormData({ ...formData, layout: { ...formData.layout, sections } });
   };
 
   const removeSection = (index) => {
-    const sections = formData.layout.sections.filter((_, i) => i !== index);
+    const sections = formData.layout.sections.filter((s, i) => i !== index);
     setFormData({ ...formData, layout: { ...formData.layout, sections } });
   };
 
   const addFieldToSection = (sectionIndex, fieldId) => {
     const sections = [...formData.layout.sections];
     const field = customFields.find(f => f.id === fieldId);
-    if (field && !sections[sectionIndex].fields.find(f => f.id === fieldId)) {
-      sections[sectionIndex].fields.push({ id: fieldId, name: field.name, type: field.field_type });
+    const existingField = sections[sectionIndex].fields.find(f => f.id === fieldId);
+    if (field && !existingField) {
+      sections[sectionIndex].fields = [...sections[sectionIndex].fields, { id: fieldId, name: field.name, type: field.field_type }];
       setFormData({ ...formData, layout: { ...formData.layout, sections } });
     }
   };
@@ -155,6 +142,55 @@ const FormBuilderPage = () => {
 
   const assetLayouts = layouts.filter(l => l.entity_type === 'asset');
   const productLayouts = layouts.filter(l => l.entity_type === 'product');
+
+  const renderLayoutTable = (items) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Sections</TableHead>
+          <TableHead>Default</TableHead>
+          <TableHead className="w-[100px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {loading ? (
+          [1,2,3].map((i) => (
+            <TableRow key={i}>
+              <TableCell colSpan={4}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+            </TableRow>
+          ))
+        ) : items.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={4} className="h-32 text-center">
+              <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No layouts yet</p>
+            </TableCell>
+          </TableRow>
+        ) : (
+          items.map((layout) => (
+            <TableRow key={layout.id}>
+              <TableCell className="font-medium">{layout.name}</TableCell>
+              <TableCell>{layout.layout?.sections?.length || 0} sections</TableCell>
+              <TableCell>{layout.is_default && <Badge>Default</Badge>}</TableCell>
+              <TableCell>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(layout)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(layout.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
+
+  const currentSections = formData.layout.sections || [];
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="form-builder-page">
@@ -177,107 +213,13 @@ const FormBuilderPage = () => {
 
         <TabsContent value="asset">
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Sections</TableHead>
-                    <TableHead>Default</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    [...Array(3)].map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={4}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : assetLayouts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center">
-                        <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">No asset layouts yet</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    assetLayouts.map((layout) => (
-                      <TableRow key={layout.id}>
-                        <TableCell className="font-medium">{layout.name}</TableCell>
-                        <TableCell>{layout.layout?.sections?.length || 0} sections</TableCell>
-                        <TableCell>
-                          {layout.is_default && <Badge>Default</Badge>}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(layout)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(layout.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+            <CardContent className="p-0">{renderLayoutTable(assetLayouts)}</CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="product">
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Sections</TableHead>
-                    <TableHead>Default</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    [...Array(3)].map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={4}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : productLayouts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center">
-                        <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">No product layouts yet</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    productLayouts.map((layout) => (
-                      <TableRow key={layout.id}>
-                        <TableCell className="font-medium">{layout.name}</TableCell>
-                        <TableCell>{layout.layout?.sections?.length || 0} sections</TableCell>
-                        <TableCell>
-                          {layout.is_default && <Badge>Default</Badge>}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(layout)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(layout.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+            <CardContent className="p-0">{renderLayoutTable(productLayouts)}</CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -335,14 +277,14 @@ const FormBuilderPage = () => {
                 </Button>
               </div>
 
-              {(formData.layout.sections || []).map((section, sectionIndex) => (
+              {currentSections.map((section, sectionIndex) => (
                 <Card key={sectionIndex} className="bg-muted/50">
                   <CardHeader className="py-3">
                     <div className="flex items-center gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
                       <Input
                         value={section.name}
-                        onChange={(e) => updateSection(sectionIndex, { ...section, name: e.target.value })}
+                        onChange={(e) => updateSectionName(sectionIndex, e.target.value)}
                         className="flex-1 h-8"
                         placeholder="Section name"
                       />
@@ -357,7 +299,7 @@ const FormBuilderPage = () => {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="py-3 space-y-3">
+                  <div className="px-6 pb-3 space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {section.fields.map((field) => (
                         <Badge key={field.id} variant="secondary" className="gap-1">
@@ -381,13 +323,13 @@ const FormBuilderPage = () => {
                           ))}
                       </SelectContent>
                     </Select>
-                  </CardContent>
+                  </div>
                 </Card>
               ))}
 
-              {(formData.layout.sections || []).length === 0 && (
+              {currentSections.length === 0 && (
                 <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                  <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <Layers className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">No sections added yet</p>
                 </div>
               )}
