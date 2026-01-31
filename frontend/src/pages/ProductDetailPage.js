@@ -62,6 +62,7 @@ const ProductDetailPage = () => {
   const [buyers, setBuyers] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [pomList, setPomList] = useState([]);
   const [newTag, setNewTag] = useState('');
 
   const lifecycleStages = [
@@ -88,7 +89,7 @@ const ProductDetailPage = () => {
 
   const fetchLibraries = useCallback(async () => {
     try {
-      const [divisionsRes, typesRes, colorsRes, sizesRes, suppliersRes, buyersRes, seasonsRes, materialsRes] = await Promise.all([
+      const [divisionsRes, typesRes, colorsRes, sizesRes, suppliersRes, buyersRes, seasonsRes, materialsRes, pomRes] = await Promise.all([
         api.get('/divisions'),
         api.get('/product-types'),
         api.get('/colors'),
@@ -96,7 +97,8 @@ const ProductDetailPage = () => {
         api.get('/suppliers'),
         api.get('/buyers'),
         api.get('/seasons'),
-        api.get('/materials')
+        api.get('/materials'),
+        api.get('/pom')
       ]);
       setDivisions(divisionsRes.data);
       setProductTypes(typesRes.data);
@@ -106,6 +108,7 @@ const ProductDetailPage = () => {
       setBuyers(buyersRes.data);
       setSeasons(seasonsRes.data);
       setMaterials(materialsRes.data);
+      setPomList(pomRes.data);
     } catch (error) {
       console.error('Failed to fetch libraries:', error);
     }
