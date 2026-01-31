@@ -502,23 +502,19 @@ const AssetDetailPage = () => {
               </TabsContent>
 
               <TabsContent value="bom" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-center py-8">
-                      Bill of Materials - Coming soon
-                    </p>
-                  </CardContent>
-                </Card>
+                <BOMPanel
+                  bom={formData.bom || []}
+                  onChange={(bom) => setFormData({ ...formData, bom })}
+                  materials={materials}
+                />
               </TabsContent>
 
               <TabsContent value="measurements" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-center py-8">
-                      Measurement Charts - Coming soon
-                    </p>
-                  </CardContent>
-                </Card>
+                <MeasurementChartPanel
+                  measurements={formData.measurements || []}
+                  onChange={(measurements) => setFormData({ ...formData, measurements })}
+                  sizes={sizes}
+                />
               </TabsContent>
             </Tabs>
           </div>
