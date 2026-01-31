@@ -105,8 +105,6 @@ Create a tenant-based asset and product management software with:
 - [ ] Product sub-tabs (Colors, Sizes, SKU Codes, Barcodes) - partially done
 
 ### P2 (Nice to Have)
-- [ ] BOM (Bill of Materials) subform
-- [ ] Measurement charts subform
 - [ ] Bulk import/export functionality
 - [ ] Advanced search and filtering
 - [ ] `.ai` file processing (artboard extraction)
