@@ -17,9 +17,11 @@ import SizesLibraryPage from "./pages/SizesLibraryPage";
 import CustomFieldsLibraryPage from "./pages/CustomFieldsLibraryPage";
 import SuppliersLibraryPage from "./pages/SuppliersLibraryPage";
 import BuyersLibraryPage from "./pages/BuyersLibraryPage";
+import POMLibraryPage from "./pages/POMLibraryPage";
 import FormBuilderPage from "./pages/FormBuilderPage";
 import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
+import CodeConfigurationPage from "./pages/CodeConfigurationPage";
 
 // Layout
 import DashboardLayout from "./components/DashboardLayout";
