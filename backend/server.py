@@ -793,6 +793,144 @@ async def delete_buyer(buyer_id: str, current_user: dict = Depends(get_current_u
     await db.buyers.delete_one({"id": buyer_id})
     return {"status": "deleted"}
 
+# ==================== POM (Points of Measurement) ROUTES ====================
+
+@api_router.get("/pom", response_model=List[POMResponse])
+async def get_pom_list(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    pom_list = await db.pom.find({}, {"_id": 0}).sort("sort_order", 1).to_list(1000)
+    return pom_list
+
+@api_router.post("/pom", response_model=POMResponse)
+async def create_pom(pom: POMCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    pom_doc = {"id": str(uuid.uuid4()), **pom.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.pom.insert_one(pom_doc)
+    return {k: v for k, v in pom_doc.items() if k != "_id"}
+
+@api_router.put("/pom/{pom_id}", response_model=POMResponse)
+async def update_pom(pom_id: str, pom: POMCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.pom.update_one({"id": pom_id}, {"$set": pom.model_dump()})
+    updated = await db.pom.find_one({"id": pom_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/pom/{pom_id}")
+async def delete_pom(pom_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.pom.delete_one({"id": pom_id})
+    return {"status": "deleted"}
+
+# ==================== CODE CONFIGURATION ROUTES ====================
+
+@api_router.get("/code-config", response_model=List[CodeConfigResponse])
+async def get_code_configs(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    configs = await db.code_config.find({}, {"_id": 0}).to_list(100)
+    return configs
+
+@api_router.get("/code-config/{entity_type}", response_model=CodeConfigResponse)
+async def get_code_config(entity_type: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    config = await db.code_config.find_one({"entity_type": entity_type}, {"_id": 0})
+    if not config:
+        # Return default config
+        return {
+            "id": "",
+            "entity_type": entity_type,
+            "prefix": entity_type.upper()[:3],
+            "separator": "-",
+            "include_date": False,
+            "date_format": "YYMMDD",
+            "sequence_digits": 4,
+            "sequence_start": 1,
+            "current_sequence": 1,
+            "updated_at": ""
+        }
+    return config
+
+@api_router.post("/code-config", response_model=CodeConfigResponse)
+async def create_or_update_code_config(config: CodeConfigCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    existing = await db.code_config.find_one({"entity_type": config.entity_type})
+    now = datetime.now(timezone.utc).isoformat()
+    
+    if existing:
+        update_data = config.model_dump()
+        update_data["updated_at"] = now
+        await db.code_config.update_one(
+            {"entity_type": config.entity_type}, 
+            {"$set": update_data}
+        )
+        updated = await db.code_config.find_one({"entity_type": config.entity_type}, {"_id": 0})
+        return updated
+    else:
+        config_doc = {
+            "id": str(uuid.uuid4()),
+            **config.model_dump(),
+            "current_sequence": config.sequence_start,
+            "updated_at": now
+        }
+        await db.code_config.insert_one(config_doc)
+        return {k: v for k, v in config_doc.items() if k != "_id"}
+
+@api_router.post("/code-config/{entity_type}/generate", response_model=dict)
+async def generate_code(entity_type: str, current_user: dict = Depends(get_current_user)):
+    """Generate the next code for an entity type based on configuration"""
+    db = get_tenant_db(current_user["tenant_id"])
+    config = await db.code_config.find_one({"entity_type": entity_type})
+    
+    if not config:
+        # Use default configuration
+        prefix = entity_type.upper()[:3]
+        separator = "-"
+        sequence = 1
+        digits = 4
+        include_date = False
+    else:
+        prefix = config.get("prefix", entity_type.upper()[:3])
+        separator = config.get("separator", "-")
+        sequence = config.get("current_sequence", 1)
+        digits = config.get("sequence_digits", 4)
+        include_date = config.get("include_date", False)
+    
+    # Build the code
+    parts = [prefix]
+    if include_date:
+        date_format = config.get("date_format", "YYMMDD") if config else "YYMMDD"
+        if date_format == "YYMMDD":
+            parts.append(datetime.now().strftime("%y%m%d"))
+        elif date_format == "YYYYMMDD":
+            parts.append(datetime.now().strftime("%Y%m%d"))
+        elif date_format == "YYMM":
+            parts.append(datetime.now().strftime("%y%m"))
+    
+    parts.append(str(sequence).zfill(digits))
+    code = separator.join(parts)
+    
+    # Update the sequence
+    if config:
+        await db.code_config.update_one(
+            {"entity_type": entity_type},
+            {"$inc": {"current_sequence": 1}}
+        )
+    else:
+        # Create default config with incremented sequence
+        await db.code_config.insert_one({
+            "id": str(uuid.uuid4()),
+            "entity_type": entity_type,
+            "prefix": prefix,
+            "separator": separator,
+            "include_date": False,
+            "date_format": "YYMMDD",
+            "sequence_digits": digits,
+            "sequence_start": 1,
+            "current_sequence": 2,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"code": code}
+
 # ==================== ASSET ROUTES ====================
 
 @api_router.get("/assets", response_model=List[AssetResponse])
