@@ -905,11 +905,11 @@ def main():
     tester = AssetProductAPITester()
     
     try:
-        # Test authentication first
-        if not tester.test_register():
-            print("❌ Registration failed, trying login with test credentials")
-            if not tester.test_login():
-                print("❌ Both registration and login failed, stopping tests")
+        # Test authentication first - try specific credentials first
+        if not tester.test_specific_login():
+            print("❌ Specific login failed, trying registration")
+            if not tester.test_register():
+                print("❌ Both specific login and registration failed, stopping tests")
                 return 1
         
         # Test user info
