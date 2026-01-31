@@ -831,8 +831,8 @@ class AssetProductAPITester:
                 print(f"✅ Passed - Status: {response.status_code}")
                 
                 result = response.json()
-                asset_id = result['asset']['id']
-                self.created_items['assets'].append(asset_id)
+                entity_id = result['entity']['id']
+                self.created_items['assets'].append(entity_id)
                 print(f"   PNG image processed successfully")
                 
                 return True
