@@ -31,7 +31,7 @@ import {
   Menu,
   X,
   Hash,
-  Ruler2
+  SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -43,7 +43,7 @@ const navigation = [
   { type: 'separator', label: 'Libraries' },
   { name: 'Colors', href: '/libraries/colors', icon: Palette },
   { name: 'Sizes', href: '/libraries/sizes', icon: Ruler },
-  { name: 'POM', href: '/libraries/pom', icon: Ruler2 },
+  { name: 'POM', href: '/libraries/pom', icon: SlidersHorizontal },
   { name: 'Custom Fields', href: '/libraries/custom-fields', icon: FileText },
   { name: 'Suppliers', href: '/libraries/suppliers', icon: Truck },
   { name: 'Buyers', href: '/libraries/buyers', icon: Building2 },
