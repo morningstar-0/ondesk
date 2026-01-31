@@ -99,9 +99,8 @@ Create a tenant-based asset and product management software with:
 - All core features implemented and tested
 
 ### P1 (Important) - UPCOMING
-- [ ] Full-screen detail pages with new tab option
 - [ ] Enhanced Media Upload Panel (drag-drop, copy-paste, multi-file)
-- [ ] Product sub-tabs (Colors, Sizes, SKU Codes, Barcodes)
+- [ ] Product sub-tabs (Colors, Sizes, SKU Codes, Barcodes) - partially done
 
 ### P2 (Nice to Have)
 - [ ] BOM (Bill of Materials) subform
