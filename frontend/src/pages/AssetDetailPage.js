@@ -13,6 +13,8 @@ import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
 import FullScreenHeader from '../components/FullScreenHeader';
+import BOMPanel from '../components/BOMPanel';
+import MeasurementChartPanel from '../components/MeasurementChartPanel';
 import { Save, Trash2, ArrowRightLeft, Upload, Image, Plus, X } from 'lucide-react';
 
 const AssetDetailPage = () => {
