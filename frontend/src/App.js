@@ -98,11 +98,13 @@ function AppRoutes() {
       <Route path="/libraries/custom-fields" element={<ProtectedRoute><CustomFieldsLibraryPage /></ProtectedRoute>} />
       <Route path="/libraries/suppliers" element={<ProtectedRoute><SuppliersLibraryPage /></ProtectedRoute>} />
       <Route path="/libraries/buyers" element={<ProtectedRoute><BuyersLibraryPage /></ProtectedRoute>} />
+      <Route path="/libraries/pom" element={<ProtectedRoute><POMLibraryPage /></ProtectedRoute>} />
 
       {/* Admin */}
       <Route path="/form-builder" element={<ProtectedRoute><FormBuilderPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+      <Route path="/admin/code-config" element={<ProtectedRoute><CodeConfigurationPage /></ProtectedRoute>} />
 
       {/* Redirects */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
