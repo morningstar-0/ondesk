@@ -356,7 +356,9 @@ async def register(user: UserCreate):
     })
     
     token = create_token(user_id, tenant_id, user.email, user_doc["role"])
-    return {"token": token, "user": {k: v for k, v in user_doc.items() if k != "password"}}
+    # Exclude _id and password from response
+    user_response = {k: v for k, v in user_doc.items() if k not in ["password", "_id"]}
+    return {"token": token, "user": user_response}
 
 @api_router.post("/auth/login", response_model=dict)
 async def login(credentials: UserLogin):
