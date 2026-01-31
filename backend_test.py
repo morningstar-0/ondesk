@@ -1,7 +1,10 @@
 import requests
 import sys
 import json
+import base64
+import io
 from datetime import datetime
+from PIL import Image
 
 class AssetProductAPITester:
     def __init__(self, base_url="https://asset-product-mgr.preview.emergentagent.com/api"):
