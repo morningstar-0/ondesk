@@ -28,7 +28,7 @@ const separators = [
   { value: '-', label: 'Dash (-)' },
   { value: '_', label: 'Underscore (_)' },
   { value: '.', label: 'Dot (.)' },
-  { value: '', label: 'None' }
+  { value: 'none', label: 'None' }
 ];
 
 const CodeConfigurationPage = () => {
