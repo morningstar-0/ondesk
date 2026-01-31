@@ -270,20 +270,20 @@ const MaterialDetailPage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Division</Label>
-                    <Select value={formData.division_id} onValueChange={(v) => setFormData({ ...formData, division_id: v })}>
+                    <Select value={formData.division_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, division_id: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {divisions.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Supplier</Label>
-                    <Select value={formData.supplier_id} onValueChange={(v) => setFormData({ ...formData, supplier_id: v })}>
+                    <Select value={formData.supplier_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
