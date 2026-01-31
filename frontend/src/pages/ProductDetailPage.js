@@ -418,30 +418,30 @@ const ProductDetailPage = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Division</Label>
-                    <Select value={formData.division_id} onValueChange={(v) => setFormData({ ...formData, division_id: v })}>
+                    <Select value={formData.division_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, division_id: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {divisions.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Product Type</Label>
-                    <Select value={formData.product_type_id} onValueChange={(v) => setFormData({ ...formData, product_type_id: v })}>
+                    <Select value={formData.product_type_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, product_type_id: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {productTypes.filter(t => !t.parent_id).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Product Subtype</Label>
-                    <Select value={formData.product_subtype_id} onValueChange={(v) => setFormData({ ...formData, product_subtype_id: v })}>
+                    <Select value={formData.product_subtype_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, product_subtype_id: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {productTypes.filter(t => t.parent_id === formData.product_type_id).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -486,20 +486,20 @@ const ProductDetailPage = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Supplier</Label>
-                        <Select value={formData.supplier_id} onValueChange={(v) => setFormData({ ...formData, supplier_id: v })}>
+                        <Select value={formData.supplier_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "__none__" ? "" : v })}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
                         <Label>Season</Label>
-                        <Select value={formData.season_id} onValueChange={(v) => setFormData({ ...formData, season_id: v })}>
+                        <Select value={formData.season_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, season_id: v === "__none__" ? "" : v })}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {seasons.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
