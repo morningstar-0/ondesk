@@ -69,6 +69,7 @@ const CodeConfigurationPage = () => {
 
   const generatePreview = (config) => {
     if (!config) return '---';
+    const separator = config.separator === 'none' ? '' : (config.separator || '-');
     const parts = [config.prefix || 'XXX'];
     if (config.include_date) {
       const now = new Date();
@@ -82,7 +83,7 @@ const CodeConfigurationPage = () => {
     }
     const seq = String(config.current_sequence || config.sequence_start || 1).padStart(config.sequence_digits || 4, '0');
     parts.push(seq);
-    return parts.join(config.separator || '-');
+    return parts.join(separator);
   };
 
   const updateConfig = (entityType, field, value) => {
