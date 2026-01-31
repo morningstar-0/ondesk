@@ -83,10 +83,10 @@ class ColorCreate(BaseModel):
 class ColorResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    name: str
-    hex_code: str
-    description: str
-    created_at: str
+    name: str = ""
+    hex_code: str = ""
+    description: str = ""
+    created_at: str = ""
 
 class SizeCreate(BaseModel):
     name: str
@@ -97,11 +97,11 @@ class SizeCreate(BaseModel):
 class SizeResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    name: str
-    code: str
-    category: str
-    sort_order: int
-    created_at: str
+    name: str = ""
+    code: str = ""
+    category: str = "general"
+    sort_order: int = 0
+    created_at: str = ""
 
 class CustomFieldCreate(BaseModel):
     name: str
@@ -114,13 +114,13 @@ class CustomFieldCreate(BaseModel):
 class CustomFieldResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    name: str
-    field_type: str
-    options: List[str]
-    required: bool
-    default_value: str
-    category: str
-    created_at: str
+    name: str = ""
+    field_type: str = ""
+    options: List[str] = []
+    required: bool = False
+    default_value: str = ""
+    category: str = "general"
+    created_at: str = ""
 
 class SupplierCreate(BaseModel):
     name: str
@@ -134,14 +134,14 @@ class SupplierCreate(BaseModel):
 class SupplierResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    name: str
-    code: str
-    email: str
-    phone: str
-    address: str
-    country: str
-    is_active: bool
-    created_at: str
+    name: str = ""
+    code: str = ""
+    email: str = ""
+    phone: str = ""
+    address: str = ""
+    country: str = ""
+    is_active: bool = True
+    created_at: str = ""
 
 class BuyerCreate(BaseModel):
     name: str
@@ -155,14 +155,14 @@ class BuyerCreate(BaseModel):
 class BuyerResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    name: str
-    code: str
-    email: str
-    phone: str
-    address: str
-    country: str
-    is_active: bool
-    created_at: str
+    name: str = ""
+    code: str = ""
+    email: str = ""
+    phone: str = ""
+    address: str = ""
+    country: str = ""
+    is_active: bool = True
+    created_at: str = ""
 
 class DivisionCreate(BaseModel):
     name: str
