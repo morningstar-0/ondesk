@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -30,16 +30,19 @@ import {
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Progress } from '../components/ui/progress';
 import { toast } from 'sonner';
-import { Plus, Search, MoreVertical, Pencil, Trash2, ArrowRightLeft, Sparkles, Package } from 'lucide-react';
+import { Plus, Search, MoreVertical, Pencil, Trash2, ArrowRightLeft, Sparkles, Package, Upload, Image, Loader2 } from 'lucide-react';
 
 const AssetsPage = () => {
   const { api } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [formData, setFormData] = useState({
     name: '', sku: '', description: '', category: '', status: 'draft'
@@ -48,13 +51,12 @@ const AssetsPage = () => {
   const [sizes, setSizes] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
 
-  useEffect(() => {
-    fetchAssets();
-    fetchLibraries();
-  }, []);
-
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       const response = await api.get('/assets');
       setAssets(response.data);
@@ -63,9 +65,9 @@ const AssetsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
-  const fetchLibraries = async () => {
+  const fetchLibraries = useCallback(async () => {
     try {
       const [colorsRes, sizesRes, suppliersRes] = await Promise.all([
         api.get('/colors'),
@@ -78,7 +80,12 @@ const AssetsPage = () => {
     } catch (error) {
       console.error('Failed to fetch libraries:', error);
     }
-  };
+  }, [api]);
+
+  useEffect(() => {
+    fetchAssets();
+    fetchLibraries();
+  }, [fetchAssets, fetchLibraries]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -160,6 +167,81 @@ const AssetsPage = () => {
     }
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a JPEG, PNG, or WebP image');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File too large. Max 10MB.');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewImage(e.target?.result);
+    };
+    reader.readAsDataURL(file);
+
+    setUploadDialogOpen(true);
+    setAiAnalysisResult(null);
+  };
+
+  const handleImageUpload = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      toast.error('Please select an image first');
+      return;
+    }
+
+    setUploadLoading(true);
+    setUploadProgress(10);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setUploadProgress(30);
+
+      const response = await api.post('/assets/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 50) / progressEvent.total) + 30;
+          setUploadProgress(Math.min(progress, 80));
+        }
+      });
+
+      setUploadProgress(100);
+      setAiAnalysisResult(response.data);
+      toast.success('Asset created successfully with AI analysis!');
+      fetchAssets();
+      
+      // Close dialog after a moment to show results
+      setTimeout(() => {
+        setUploadDialogOpen(false);
+        setPreviewImage(null);
+        setAiAnalysisResult(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 3000);
+
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to upload image');
+    } finally {
+      setUploadLoading(false);
+      setUploadProgress(0);
+    }
+  };
+
   const filteredAssets = assets.filter(asset =>
     asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     asset.sku.toLowerCase().includes(searchTerm.toLowerCase())
@@ -172,10 +254,28 @@ const AssetsPage = () => {
           <h1 className="text-3xl font-bold font-['Public_Sans'] tracking-tight">Assets</h1>
           <p className="text-muted-foreground mt-1">Manage your design assets</p>
         </div>
-        <Button onClick={() => { resetForm(); setDialogOpen(true); }} data-testid="create-asset-btn">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Asset
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleImageSelect}
+            data-testid="image-upload-input"
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            data-testid="upload-image-btn"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Image
+          </Button>
+          <Button onClick={() => { resetForm(); setDialogOpen(true); }} data-testid="create-asset-btn">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Asset
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -197,6 +297,7 @@ const AssetsPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[60px]">Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Category</TableHead>
@@ -206,23 +307,37 @@ const AssetsPage = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
-                [...Array(5)].map((_, i) => (
+                [1,2,3,4,5].map((i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5} className="h-16">
+                    <TableCell colSpan={6} className="h-16">
                       <div className="h-4 bg-muted rounded animate-pulse" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filteredAssets.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center">
+                  <TableCell colSpan={6} className="h-32 text-center">
                     <Package className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-muted-foreground">No assets found</p>
+                    <p className="text-sm text-muted-foreground mt-1">Upload an image to create one with AI</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredAssets.map((asset) => (
                   <TableRow key={asset.id} data-testid={`asset-row-${asset.id}`}>
+                    <TableCell>
+                      {asset.image_url ? (
+                        <img
+                          src={asset.image_url}
+                          alt={asset.name}
+                          className="w-10 h-10 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                          <Image className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{asset.name}</TableCell>
                     <TableCell className="font-mono text-sm">{asset.sku}</TableCell>
                     <TableCell>{asset.category || '-'}</TableCell>
@@ -261,6 +376,123 @@ const AssetsPage = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        if (!uploadLoading) {
+          setUploadDialogOpen(open);
+          if (!open) {
+            setPreviewImage(null);
+            setAiAnalysisResult(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-['Public_Sans'] flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Image Analysis
+            </DialogTitle>
+            <DialogDescription>
+              Upload an image and AI will automatically generate asset attributes
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {previewImage && (
+              <div className="flex justify-center">
+                <img
+                  src={previewImage}
+                  alt="Preview"
+                  className="max-h-64 rounded-lg object-contain border"
+                />
+              </div>
+            )}
+
+            {uploadLoading && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {uploadProgress < 80 ? 'Uploading image...' : 'Analyzing with AI...'}
+                </div>
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            )}
+
+            {aiAnalysisResult && (
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  AI Analysis Results
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>
+                    <p className="font-medium">{aiAnalysisResult.ai_analysis?.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Category:</span>
+                    <p className="font-medium">{aiAnalysisResult.ai_analysis?.category}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Description:</span>
+                    <p className="font-medium">{aiAnalysisResult.ai_analysis?.description}</p>
+                  </div>
+                  {aiAnalysisResult.ai_analysis?.detected_colors?.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Colors:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {aiAnalysisResult.ai_analysis.detected_colors.map((color, i) => (
+                          <Badge key={i} variant="outline">{color}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {aiAnalysisResult.ai_analysis?.materials?.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Materials:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {aiAnalysisResult.ai_analysis.materials.map((mat, i) => (
+                          <Badge key={i} variant="outline">{mat}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-green-600 font-medium">Asset created successfully!</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUploadDialogOpen(false)}
+              disabled={uploadLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImageUpload}
+              disabled={uploadLoading || !previewImage || aiAnalysisResult}
+              data-testid="analyze-image-btn"
+            >
+              {uploadLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Analyze & Create Asset
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
