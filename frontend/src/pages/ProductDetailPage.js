@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -8,15 +8,19 @@ import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Separator } from '../components/ui/separator';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
-import FullScreenHeader from '../components/FullScreenHeader';
 import BOMPanel from '../components/BOMPanel';
 import MeasurementChartPanel from '../components/MeasurementChartPanel';
-import { Save, Trash2, Upload, Image, Plus, X, Barcode } from 'lucide-react';
+import { 
+  Save, Trash2, Image, Plus, X, ChevronRight,
+  Package, FileText, ClipboardCheck, Settings, MessageSquare,
+  Target, File, Layers, DollarSign, ShoppingCart, Clock, List,
+  Barcode, Palette, Ruler
+} from 'lucide-react';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -27,6 +31,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [uploadPanelOpen, setUploadPanelOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('info');
+  const [activeTopTab, setActiveTopTab] = useState('item');
   
   const [formData, setFormData] = useState({
     code: '',
@@ -45,12 +51,12 @@ const ProductDetailPage = () => {
     color_ids: [],
     size_ids: [],
     sku_variants: [],
-    status: 'draft',
-    primary_image_url: '',
-    media: [],
     custom_fields: {},
     bom: [],
     measurements: [],
+    status: 'draft',
+    primary_image_url: '',
+    media: [],
     source_asset_id: ''
   });
 
@@ -124,26 +130,25 @@ const ProductDetailPage = () => {
       toast.error('Code and Name are required');
       return;
     }
-
     setSaving(true);
     try {
       if (isNew) {
         const response = await api.post('/products', formData);
-        toast.success('Product created successfully');
+        toast.success('Product created');
         navigate(`/products/${response.data.id}`);
       } else {
         await api.put(`/products/${id}`, formData);
-        toast.success('Product saved successfully');
+        toast.success('Product saved');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save');
+      toast.error('Failed to save product');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    if (!window.confirm('Delete this product?')) return;
     try {
       await api.delete(`/products/${id}`);
       toast.success('Product deleted');
@@ -164,577 +169,649 @@ const ProductDetailPage = () => {
     setFormData({ ...formData, tags: formData.tags.filter(t => t !== tag) });
   };
 
-  const generateSKUVariants = () => {
-    const variants = [];
-    const selectedColors = colors.filter(c => formData.color_ids.includes(c.id));
-    const selectedSizes = sizes.filter(s => formData.size_ids.includes(s.id));
-
-    if (selectedColors.length === 0 && selectedSizes.length === 0) {
-      variants.push({
-        id: `sku-${Date.now()}`,
-        color_id: '',
-        color_name: '',
-        size_id: '',
-        size_name: '',
-        sku_code: `${formData.code}-001`,
-        barcode: '',
-        price: 0,
-        cost: 0
-      });
-    } else if (selectedColors.length === 0) {
-      selectedSizes.forEach((size, i) => {
-        variants.push({
-          id: `sku-${Date.now()}-${i}`,
-          color_id: '',
-          color_name: '',
-          size_id: size.id,
-          size_name: size.name,
-          sku_code: `${formData.code}-${size.code}`,
-          barcode: '',
-          price: 0,
-          cost: 0
-        });
-      });
-    } else if (selectedSizes.length === 0) {
-      selectedColors.forEach((color, i) => {
-        variants.push({
-          id: `sku-${Date.now()}-${i}`,
-          color_id: color.id,
-          color_name: color.name,
-          size_id: '',
-          size_name: '',
-          sku_code: `${formData.code}-${color.name.substring(0, 3).toUpperCase()}`,
-          barcode: '',
-          price: 0,
-          cost: 0
-        });
-      });
-    } else {
-      let idx = 0;
-      selectedColors.forEach(color => {
-        selectedSizes.forEach(size => {
-          variants.push({
-            id: `sku-${Date.now()}-${idx++}`,
-            color_id: color.id,
-            color_name: color.name,
-            size_id: size.id,
-            size_name: size.name,
-            sku_code: `${formData.code}-${color.name.substring(0, 3).toUpperCase()}-${size.code}`,
-            barcode: '',
-            price: 0,
-            cost: 0
-          });
-        });
-      });
-    }
-
-    setFormData({ ...formData, sku_variants: variants });
-    toast.success(`Generated ${variants.length} SKU variant(s)`);
-  };
-
-  const updateSKUVariant = (variantId, field, value) => {
+  const handleMediaUpload = (mediaItem) => {
     setFormData({
       ...formData,
-      sku_variants: formData.sku_variants.map(v =>
-        v.id === variantId ? { ...v, [field]: value } : v
-      )
+      media: [...formData.media, mediaItem],
+      primary_image_url: formData.primary_image_url || mediaItem.url
     });
   };
 
-  const handleUploadComplete = (results) => {
-    const newMedia = results.map(r => r.entity?.media?.[0] || r.media).filter(Boolean);
-    setFormData(prev => ({
-      ...prev,
-      media: [...prev.media, ...newMedia],
-      primary_image_url: prev.primary_image_url || newMedia[0]?.url || ''
-    }));
-    setUploadPanelOpen(false);
+  const addSkuVariant = () => {
+    const newSku = {
+      id: `sku-${Date.now()}`,
+      sku_code: '',
+      color_id: '',
+      size_id: '',
+      barcode: ''
+    };
+    setFormData({ ...formData, sku_variants: [...formData.sku_variants, newSku] });
   };
 
-  const removeMedia = (mediaId) => {
-    setFormData(prev => ({
-      ...prev,
-      media: prev.media.filter(m => m.id !== mediaId),
-      primary_image_url: prev.primary_image_url === prev.media.find(m => m.id === mediaId)?.url ? '' : prev.primary_image_url
-    }));
+  const updateSkuVariant = (skuId, field, value) => {
+    const updatedVariants = formData.sku_variants.map(sku => 
+      sku.id === skuId ? { ...sku, [field]: value } : sku
+    );
+    setFormData({ ...formData, sku_variants: updatedVariants });
   };
 
-  const setPrimaryImage = (url) => {
-    setFormData({ ...formData, primary_image_url: url });
+  const removeSkuVariant = (skuId) => {
+    setFormData({ ...formData, sku_variants: formData.sku_variants.filter(s => s.id !== skuId) });
   };
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-6 p-6">
-        <div className="h-8 w-48 bg-muted rounded" />
-        <div className="h-96 bg-muted rounded-lg" />
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background" data-testid="product-detail-page">
-      {/* Full Screen Header */}
-      <FullScreenHeader
-        title={isNew ? 'New Product' : formData.name || 'Product'}
-        subtitle={!isNew ? formData.code : null}
-        backPath="/products"
-        backLabel="Products"
-        badge={
-          <>
-            {formData.source_asset_id && <Badge variant="outline">From Asset</Badge>}
-            {formData.lifecycle_stage && !isNew && (
-              <Badge variant="secondary" className="capitalize ml-1">
-                {formData.lifecycle_stage}
-              </Badge>
-            )}
-          </>
-        }
-      >
-        {!isNew && (
-          <Button variant="destructive" size="icon" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-        <Button onClick={handleSave} disabled={saving} data-testid="save-product-btn" className="gap-2">
-          <Save className="h-4 w-4" />
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </FullScreenHeader>
+  const sidebarSections = [
+    { id: 'info', name: 'Item Information', icon: FileText },
+    { id: 'bom', name: 'Bill of Materials', icon: Layers },
+    { id: 'colors', name: 'Colors', icon: Palette },
+    { id: 'sizes', name: 'Sizes', icon: Ruler },
+    { id: 'skus', name: 'SKU Codes', icon: Barcode },
+    { id: 'files', name: 'Files', icon: File },
+    { id: 'specs', name: 'Specifications', icon: Settings, hasArrow: true },
+    { id: 'approvals', name: 'Approvals', icon: ClipboardCheck, hasArrow: true },
+  ];
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Images */}
-          <div className="space-y-4">
+  const topTabs = [
+    { id: 'item', name: 'Item' },
+    { id: 'costing', name: 'Costing' },
+    { id: 'buying', name: 'Buying' },
+    { id: 'timeline', name: 'Time & Action' },
+    { id: 'transactions', name: 'Transactions' },
+    { id: 'log', name: 'Log' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50" data-testid="product-detail-page">
+      {/* Top Header Bar */}
+      <div className="bg-white border-b sticky top-0 z-50">
+        {/* Breadcrumbs */}
+        <div className="px-6 py-2 text-sm text-slate-500 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Link to="/products" className="hover:text-slate-700">Products</Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-slate-400">{seasons.find(s => s.id === formData.season_id)?.name || 'All Seasons'}</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-slate-700">{formData.name || 'New Product'}</span>
+          </div>
+        </div>
+
+        {/* Product Header */}
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Product Image */}
+            <div className="w-16 h-16 rounded-lg bg-slate-100 border flex items-center justify-center overflow-hidden">
+              {formData.primary_image_url ? (
+                <img 
+                  src={formData.primary_image_url} 
+                  alt={formData.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Package className="h-8 w-8 text-slate-300" />
+              )}
+            </div>
+            
+            {/* Product Info */}
+            <div>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <span className="font-mono">{formData.code || 'NEW'}</span>
+                <span>|</span>
+                <span>{suppliers.find(s => s.id === formData.supplier_id)?.name || 'No Supplier'}</span>
+                {formData.source_asset_id && (
+                  <>
+                    <span>|</span>
+                    <Badge variant="outline" className="text-xs">From Asset</Badge>
+                  </>
+                )}
+              </div>
+              <h1 className="text-xl font-semibold text-slate-800">
+                {formData.name || 'New Product'}
+              </h1>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="text-slate-500">
+              <Target className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-500">
+              <File className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-500">
+              <MessageSquare className="h-5 w-5" />
+            </Button>
+            <Separator orientation="vertical" className="h-8" />
+            {!isNew && (
+              <Button variant="outline" size="icon" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={saving} data-testid="save-product-btn">
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Top Tabs */}
+        <div className="px-6 flex gap-1 border-t border-slate-100">
+          {topTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTopTab(tab.id)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTopTab === tab.id 
+                  ? 'border-blue-500 text-blue-600' 
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex">
+        {/* Left Sidebar */}
+        <div className="w-64 bg-white border-r min-h-[calc(100vh-180px)] sticky top-[180px]">
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            <div className="p-4">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Item
+              </h3>
+              <nav className="space-y-1">
+                {sidebarSections.map(section => (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeSection === section.id
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <section.icon className="h-4 w-4" />
+                      <span>{section.name}</span>
+                    </div>
+                    {section.hasArrow && <ChevronRight className="h-4 w-4" />}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 p-6">
+          {/* Item Information Section */}
+          {activeSection === 'info' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label>Product Code *</Label>
+                      <Input
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                        placeholder="e.g., PRD-001"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Product Name *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter product name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={3}
+                      placeholder="Describe this product..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-6">
+                    <div className="space-y-2">
+                      <Label>Division</Label>
+                      <Select
+                        value={formData.division_id || '__none__'}
+                        onValueChange={(v) => setFormData({ ...formData, division_id: v === '__none__' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {divisions.map(d => (
+                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Product Type</Label>
+                      <Select
+                        value={formData.product_type_id || '__none__'}
+                        onValueChange={(v) => setFormData({ ...formData, product_type_id: v === '__none__' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {productTypes.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Season</Label>
+                      <Select
+                        value={formData.season_id || '__none__'}
+                        onValueChange={(v) => setFormData({ ...formData, season_id: v === '__none__' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {seasons.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Lifecycle Stage</Label>
+                      <Select
+                        value={formData.lifecycle_stage}
+                        onValueChange={(v) => setFormData({ ...formData, lifecycle_stage: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lifecycleStages.map(s => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Supplier</Label>
+                      <Select
+                        value={formData.supplier_id || '__none__'}
+                        onValueChange={(v) => setFormData({ ...formData, supplier_id: v === '__none__' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {suppliers.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Material Description</Label>
+                      <Input
+                        value={formData.material_description}
+                        onChange={(e) => setFormData({ ...formData, material_description: e.target.value })}
+                        placeholder="e.g., 100% Cotton Jersey"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Media</CardTitle>
+                    <Button size="sm" variant="outline" onClick={() => setUploadPanelOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Upload
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {formData.media.length === 0 ? (
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <Image className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm text-slate-500">No media uploaded</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-3"
+                        onClick={() => setUploadPanelOpen(true)}
+                      >
+                        Upload Media
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-6 gap-3">
+                      {formData.media.map((item, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100">
+                          <img src={item.url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={4}
+                    placeholder="Additional notes..."
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Bill of Materials Section */}
+          {activeSection === 'bom' && (
+            <BOMPanel
+              bom={formData.bom || []}
+              onChange={(bom) => setFormData({ ...formData, bom })}
+              materials={materials}
+              colors={colors}
+              sizes={sizes}
+            />
+          )}
+
+          {/* Colors Section */}
+          {activeSection === 'colors' && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader>
+                <CardTitle className="text-lg">Product Colors</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {formData.color_ids.map(colorId => {
+                    const color = colors.find(c => c.id === colorId);
+                    if (!color) return null;
+                    return (
+                      <Badge key={colorId} variant="secondary" className="gap-2 pr-1">
+                        <div 
+                          className="w-4 h-4 rounded-full border" 
+                          style={{ backgroundColor: color.hex_code }}
+                        />
+                        {color.name}
+                        <button 
+                          onClick={() => setFormData({
+                            ...formData,
+                            color_ids: formData.color_ids.filter(id => id !== colorId)
+                          })}
+                          className="hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <Select
+                  onValueChange={(v) => {
+                    if (!formData.color_ids.includes(v)) {
+                      setFormData({ ...formData, color_ids: [...formData.color_ids, v] });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Add a color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colors.filter(c => !formData.color_ids.includes(c.id)).map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.hex_code }} />
+                          {c.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sizes Section */}
+          {activeSection === 'sizes' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Product Sizes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {formData.size_ids.map(sizeId => {
+                    const size = sizes.find(s => s.id === sizeId);
+                    if (!size) return null;
+                    return (
+                      <Badge key={sizeId} variant="secondary" className="gap-1 pr-1">
+                        {size.name}
+                        <button 
+                          onClick={() => setFormData({
+                            ...formData,
+                            size_ids: formData.size_ids.filter(id => id !== sizeId)
+                          })}
+                          className="hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <Select
+                  onValueChange={(v) => {
+                    if (!formData.size_ids.includes(v)) {
+                      setFormData({ ...formData, size_ids: [...formData.size_ids, v] });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Add a size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizes.filter(s => !formData.size_ids.includes(s.id)).map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* SKU Codes Section */}
+          {activeSection === 'skus' && (
+            <Card>
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Media</CardTitle>
-                  <Button size="sm" variant="outline" onClick={() => setUploadPanelOpen(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload
+                  <CardTitle className="text-lg">SKU Codes</CardTitle>
+                  <Button size="sm" onClick={addSkuVariant}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add SKU
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="aspect-square rounded-lg border bg-muted overflow-hidden mb-4">
-                  {formData.primary_image_url ? (
-                    <img src={formData.primary_image_url} alt={formData.name} className="w-full h-full object-contain" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Image className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {formData.media.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`relative aspect-square rounded-md overflow-hidden border cursor-pointer ${
-                        formData.primary_image_url === item.url ? 'ring-2 ring-primary' : ''
-                      }`}
-                      onClick={() => setPrimaryImage(item.url)}
-                    >
-                      <img src={item.url} alt="" className="w-full h-full object-cover" />
-                      <button
-                        className="absolute top-1 right-1 p-1 bg-black/50 rounded-full hover:bg-black/70"
-                        onClick={(e) => { e.stopPropagation(); removeMedia(item.id); }}
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    className="aspect-square rounded-md border-2 border-dashed flex items-center justify-center hover:border-primary"
-                    onClick={() => setUploadPanelOpen(true)}
-                  >
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Lifecycle Stage</Label>
-                  <Select value={formData.lifecycle_stage} onValueChange={(v) => setFormData({ ...formData, lifecycle_stage: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {lifecycleStages.map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                {formData.sku_variants.length === 0 ? (
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                    <Barcode className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">No SKU codes defined</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={addSkuVariant}>
+                      Add First SKU
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU Code</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Barcode</TableHead>
+                        <TableHead className="w-10" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.sku_variants.map(sku => (
+                        <TableRow key={sku.id}>
+                          <TableCell>
+                            <Input
+                              value={sku.sku_code}
+                              onChange={(e) => updateSkuVariant(sku.id, 'sku_code', e.target.value)}
+                              placeholder="SKU-001"
+                              className="font-mono"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={sku.color_id || '__none__'}
+                              onValueChange={(v) => updateSkuVariant(sku.id, 'color_id', v === '__none__' ? '' : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">None</SelectItem>
+                                {colors.map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={sku.size_id || '__none__'}
+                              onValueChange={(v) => updateSkuVariant(sku.id, 'size_id', v === '__none__' ? '' : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">None</SelectItem>
+                                {sizes.map(s => (
+                                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={sku.barcode}
+                              onChange={(e) => updateSkuVariant(sku.id, 'barcode', e.target.value)}
+                              placeholder="Barcode"
+                              className="font-mono"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => removeSkuVariant(sku.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* Right Column - Details */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Files Section */}
+          {activeSection === 'files' && (
             <Card>
-              <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Code *</Label>
-                    <Input
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="PRD-001"
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Name *</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Files & Documents</CardTitle>
+                  <Button size="sm" variant="outline">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Upload File
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <Separator />
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Division</Label>
-                    <Select value={formData.division_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, division_id: v === "__none__" ? "" : v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {divisions.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Type</Label>
-                    <Select value={formData.product_type_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, product_type_id: v === "__none__" ? "" : v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {productTypes.filter(t => !t.parent_id).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Subtype</Label>
-                    <Select value={formData.product_subtype_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, product_subtype_id: v === "__none__" ? "" : v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {productTypes.filter(t => t.parent_id === formData.product_type_id).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Material Description</Label>
-                  <Textarea
-                    value={formData.material_description}
-                    onChange={(e) => setFormData({ ...formData, material_description: e.target.value })}
-                    rows={2}
-                    placeholder="Describe materials used..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tags</Label>
-                  <div className="flex gap-2">
-                    <Input value={newTag} onChange={(e) => setNewTag(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())} />
-                    <Button variant="outline" onClick={addTag}>Add</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1">{tag}<X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} /></Badge>
-                    ))}
-                  </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border-2 border-dashed rounded-lg p-12 text-center">
+                  <File className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                  <p className="text-slate-500">No files uploaded</p>
+                  <p className="text-sm text-slate-400 mt-1">Drag and drop files here or click to upload</p>
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            <Tabs defaultValue="sourcing" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="sourcing">Sourcing</TabsTrigger>
-                <TabsTrigger value="colors">Colors & Sizes</TabsTrigger>
-                <TabsTrigger value="skus">SKU Codes</TabsTrigger>
-                <TabsTrigger value="barcodes">Barcodes</TabsTrigger>
-                <TabsTrigger value="bom">BOM</TabsTrigger>
-                <TabsTrigger value="measurements">Measurements</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-              </TabsList>
+          {/* Specifications Section */}
+          {activeSection === 'specs' && (
+            <MeasurementChartPanel
+              measurements={formData.measurements || []}
+              onChange={(measurements) => setFormData({ ...formData, measurements })}
+              sizes={sizes}
+              pomList={pomList}
+            />
+          )}
 
-              <TabsContent value="sourcing" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Supplier</Label>
-                        <Select value={formData.supplier_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "__none__" ? "" : v })}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Season</Label>
-                        <Select value={formData.season_id || "__none__"} onValueChange={(v) => setFormData({ ...formData, season_id: v === "__none__" ? "" : v })}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {seasons.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Buyers</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {buyers.map(buyer => (
-                          <button
-                            key={buyer.id}
-                            className={`px-3 py-1.5 rounded-md border text-sm ${formData.buyer_ids.includes(buyer.id) ? 'border-primary bg-primary/10' : 'hover:border-primary/50'}`}
-                            onClick={() => {
-                              const ids = formData.buyer_ids.includes(buyer.id)
-                                ? formData.buyer_ids.filter(id => id !== buyer.id)
-                                : [...formData.buyer_ids, buyer.id];
-                              setFormData({ ...formData, buyer_ids: ids });
-                            }}
-                          >
-                            {buyer.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="colors" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="space-y-2">
-                      <Label>Colors</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {colors.map(color => (
-                          <button
-                            key={color.id}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md border ${formData.color_ids.includes(color.id) ? 'border-primary bg-primary/10' : 'hover:border-primary/50'}`}
-                            onClick={() => {
-                              const ids = formData.color_ids.includes(color.id) ? formData.color_ids.filter(id => id !== color.id) : [...formData.color_ids, color.id];
-                              setFormData({ ...formData, color_ids: ids });
-                            }}
-                          >
-                            <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.hex_code }} />
-                            <span className="text-sm">{color.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Sizes</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {sizes.map(size => (
-                          <button
-                            key={size.id}
-                            className={`px-3 py-1.5 rounded-md border text-sm ${formData.size_ids.includes(size.id) ? 'border-primary bg-primary/10' : 'hover:border-primary/50'}`}
-                            onClick={() => {
-                              const ids = formData.size_ids.includes(size.id) ? formData.size_ids.filter(id => id !== size.id) : [...formData.size_ids, size.id];
-                              setFormData({ ...formData, size_ids: ids });
-                            }}
-                          >
-                            {size.name} ({size.code})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="skus" className="mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">SKU Variants</CardTitle>
-                      <Button size="sm" onClick={generateSKUVariants}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Generate SKUs
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Color</TableHead>
-                          <TableHead>Size</TableHead>
-                          <TableHead>SKU Code</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Cost</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {formData.sku_variants.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                              Select colors and sizes, then click "Generate SKUs"
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          formData.sku_variants.map(variant => (
-                            <TableRow key={variant.id}>
-                              <TableCell>
-                                {variant.color_name ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: colors.find(c => c.id === variant.color_id)?.hex_code }} />
-                                    {variant.color_name}
-                                  </div>
-                                ) : '-'}
-                              </TableCell>
-                              <TableCell>{variant.size_name || '-'}</TableCell>
-                              <TableCell>
-                                <Input
-                                  value={variant.sku_code}
-                                  onChange={(e) => updateSKUVariant(variant.id, 'sku_code', e.target.value)}
-                                  className="h-8 font-mono"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  value={variant.price}
-                                  onChange={(e) => updateSKUVariant(variant.id, 'price', parseFloat(e.target.value) || 0)}
-                                  className="h-8 w-24"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  value={variant.cost}
-                                  onChange={(e) => updateSKUVariant(variant.id, 'cost', parseFloat(e.target.value) || 0)}
-                                  className="h-8 w-24"
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="barcodes" className="mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Barcode className="h-5 w-5" />
-                      Barcodes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>SKU Code</TableHead>
-                          <TableHead>Color</TableHead>
-                          <TableHead>Size</TableHead>
-                          <TableHead>Barcode</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {formData.sku_variants.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                              Generate SKUs first to add barcodes
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          formData.sku_variants.map(variant => (
-                            <TableRow key={variant.id}>
-                              <TableCell className="font-mono">{variant.sku_code}</TableCell>
-                              <TableCell>{variant.color_name || '-'}</TableCell>
-                              <TableCell>{variant.size_name || '-'}</TableCell>
-                              <TableCell>
-                                <Input
-                                  value={variant.barcode || ''}
-                                  onChange={(e) => updateSKUVariant(variant.id, 'barcode', e.target.value)}
-                                  className="h-8 font-mono"
-                                  placeholder="Enter barcode..."
-                                />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="bom" className="mt-4">
-                <BOMPanel
-                  bom={formData.bom || []}
-                  onChange={(bom) => setFormData({ ...formData, bom })}
-                  materials={materials}
-                  colors={colors}
-                  sizes={sizes}
-                />
-              </TabsContent>
-
-              <TabsContent value="measurements" className="mt-4">
-                <MeasurementChartPanel
-                  measurements={formData.measurements || []}
-                  onChange={(measurements) => setFormData({ ...formData, measurements })}
-                  sizes={sizes}
-                  pomList={pomList}
-                />
-              </TabsContent>
-
-              <TabsContent value="notes" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      rows={6}
-                      placeholder="Add internal notes..."
-                      className="mt-2"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
+          {/* Approvals Section */}
+          {activeSection === 'approvals' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Approvals</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="border-2 border-dashed rounded-lg p-12 text-center">
+                  <ClipboardCheck className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                  <p className="text-slate-500">No approval workflow configured</p>
+                  <p className="text-sm text-slate-400 mt-1">Set up approval stages for this product</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
+      {/* Upload Panel */}
       <MediaUploadPanel
         isOpen={uploadPanelOpen}
         onClose={() => setUploadPanelOpen(false)}
-        onUploadComplete={handleUploadComplete}
+        onUpload={handleMediaUpload}
         entityType="product"
         entityId={isNew ? '' : id}
         api={api}
