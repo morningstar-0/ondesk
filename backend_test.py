@@ -389,13 +389,24 @@ class AssetProductAPITester:
         if not success:
             return False
             
-        # Update asset
+        # Update asset with enhanced fields
         update_data = {
+            "code": "TST-AST-001-UPD",
             "name": "Updated Test Asset",
-            "sku": "TST-AST-001-UPD",
             "description": "Updated test asset description",
-            "category": "updated-category",
-            "status": "active"
+            "division_id": "",
+            "product_type_id": "",
+            "product_subtype_id": "",
+            "tags": ["updated", "test"],
+            "color_ids": [],
+            "size_ids": [],
+            "supplier_id": "",
+            "status": "active",
+            "primary_image_url": "",
+            "media": [],
+            "custom_fields": {},
+            "bom": [],
+            "measurements": []
         }
         
         success, _ = self.run_test(
