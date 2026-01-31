@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Boxes, ShoppingBag, Truck, Building2, Palette, Ruler } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const CHART_COLORS = ['#7C3AED', '#10B981', '#F59E0B', '#3B82F6', '#EC4899'];
 
@@ -12,11 +11,7 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await api.get('/dashboard/stats');
       setStats(response.data);
@@ -25,7 +20,11 @@ const DashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   const statCards = [
     { title: 'Assets', value: stats?.counts?.assets || 0, icon: Boxes, color: 'text-violet-600' },
@@ -36,15 +35,12 @@ const DashboardPage = () => {
     { title: 'Sizes', value: stats?.counts?.sizes || 0, icon: Ruler, color: 'text-cyan-600' },
   ];
 
-  const assetStatusData = Object.entries(stats?.assets_by_status || {}).map(([name, value]) => ({ name, value }));
-  const productStatusData = Object.entries(stats?.products_by_status || {}).map(([name, value]) => ({ name, value }));
-
   if (loading) {
     return (
       <div className="animate-pulse space-y-6">
         <div className="h-8 w-48 bg-muted rounded" />
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
+          {[1,2,3,4,5,6].map((i) => (
             <div key={i} className="h-24 bg-muted rounded-lg" />
           ))}
         </div>
@@ -72,67 +68,6 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assets by Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-['Public_Sans']">Assets by Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {assetStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={assetStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {assetStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                No assets yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Products by Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-['Public_Sans']">Products by Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {productStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={productStatusData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#7C3AED" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                No products yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Recent Items */}
