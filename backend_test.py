@@ -7,7 +7,7 @@ from datetime import datetime
 from PIL import Image
 
 class AssetProductAPITester:
-    def __init__(self, base_url="https://asset-product-mgr.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://inventoai-1.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
