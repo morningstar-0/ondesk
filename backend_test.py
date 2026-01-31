@@ -795,8 +795,8 @@ class AssetProductAPITester:
                 
                 if response.status_code == 200:
                     result = response.json()
-                    asset_id = result['asset']['id']
-                    self.created_items['assets'].append(asset_id)
+                    entity_id = result['entity']['id']
+                    self.created_items['assets'].append(entity_id)
                     print(f"   Large file accepted and processed")
                 else:
                     print(f"   Large file correctly rejected")
