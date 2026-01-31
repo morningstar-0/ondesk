@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -164,6 +164,52 @@ class BuyerResponse(BaseModel):
     is_active: bool
     created_at: str
 
+class DivisionCreate(BaseModel):
+    name: str
+    code: str
+    description: Optional[str] = ""
+
+class DivisionResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    code: str
+    description: str
+    created_at: str
+
+class ProductTypeCreate(BaseModel):
+    name: str
+    code: str
+    parent_id: Optional[str] = ""
+
+class ProductTypeResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    code: str
+    parent_id: str
+    created_at: str
+
+class SeasonCreate(BaseModel):
+    name: str
+    code: str
+    year: Optional[int] = 2024
+
+class SeasonResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    code: str
+    year: int
+    created_at: str
+
+class MediaItem(BaseModel):
+    id: str
+    url: str
+    type: str  # image, video
+    filename: str
+    is_primary: bool = False
+
 class BOMItem(BaseModel):
     component_id: str
     component_name: str
@@ -176,11 +222,26 @@ class MeasurementItem(BaseModel):
     size_name: str
     measurements: Dict[str, float]
 
+class SKUVariant(BaseModel):
+    id: str
+    color_id: Optional[str] = ""
+    color_name: Optional[str] = ""
+    size_id: Optional[str] = ""
+    size_name: Optional[str] = ""
+    sku_code: str
+    barcode: Optional[str] = ""
+    price: Optional[float] = 0
+    cost: Optional[float] = 0
+
+# Updated Asset Model
 class AssetCreate(BaseModel):
+    code: str
     name: str
-    sku: str
     description: Optional[str] = ""
-    category: Optional[str] = ""
+    division_id: Optional[str] = ""
+    product_type_id: Optional[str] = ""
+    product_subtype_id: Optional[str] = ""
+    tags: Optional[List[str]] = []
     color_ids: Optional[List[str]] = []
     size_ids: Optional[List[str]] = []
     supplier_id: Optional[str] = ""
@@ -188,15 +249,19 @@ class AssetCreate(BaseModel):
     bom: Optional[List[BOMItem]] = []
     measurements: Optional[List[MeasurementItem]] = []
     status: Optional[str] = "draft"
-    image_url: Optional[str] = ""
+    primary_image_url: Optional[str] = ""
+    media: Optional[List[Dict]] = []
 
 class AssetResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
+    code: str
     name: str
-    sku: str
     description: str
-    category: str
+    division_id: str
+    product_type_id: str
+    product_subtype_id: str
+    tags: List[str]
     color_ids: List[str]
     size_ids: List[str]
     supplier_id: str
@@ -204,47 +269,108 @@ class AssetResponse(BaseModel):
     bom: List[Dict]
     measurements: List[Dict]
     status: str
-    image_url: str
+    primary_image_url: str
+    media: List[Dict]
     created_at: str
     updated_at: str
 
+# Updated Product Model
 class ProductCreate(BaseModel):
+    code: str
     name: str
-    sku: str
     description: Optional[str] = ""
-    category: Optional[str] = ""
+    division_id: Optional[str] = ""
+    product_type_id: Optional[str] = ""
+    product_subtype_id: Optional[str] = ""
+    material_description: Optional[str] = ""
+    buyer_ids: Optional[List[str]] = []
+    supplier_id: Optional[str] = ""
+    season_id: Optional[str] = ""
+    lifecycle_stage: Optional[str] = "concept"
+    notes: Optional[str] = ""
+    tags: Optional[List[str]] = []
     color_ids: Optional[List[str]] = []
     size_ids: Optional[List[str]] = []
-    supplier_id: Optional[str] = ""
-    buyer_id: Optional[str] = ""
+    sku_variants: Optional[List[Dict]] = []
     custom_fields: Optional[Dict[str, Any]] = {}
     bom: Optional[List[BOMItem]] = []
     measurements: Optional[List[MeasurementItem]] = []
     status: Optional[str] = "draft"
-    price: Optional[float] = 0.0
-    cost: Optional[float] = 0.0
-    image_url: Optional[str] = ""
+    primary_image_url: Optional[str] = ""
+    media: Optional[List[Dict]] = []
     source_asset_id: Optional[str] = ""
 
 class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
+    code: str
     name: str
-    sku: str
     description: str
-    category: str
+    division_id: str
+    product_type_id: str
+    product_subtype_id: str
+    material_description: str
+    buyer_ids: List[str]
+    supplier_id: str
+    season_id: str
+    lifecycle_stage: str
+    notes: str
+    tags: List[str]
     color_ids: List[str]
     size_ids: List[str]
-    supplier_id: str
-    buyer_id: str
+    sku_variants: List[Dict]
     custom_fields: Dict[str, Any]
     bom: List[Dict]
     measurements: List[Dict]
     status: str
-    price: float
-    cost: float
-    image_url: str
+    primary_image_url: str
+    media: List[Dict]
     source_asset_id: str
+    created_at: str
+    updated_at: str
+
+# Material Model (similar to Product)
+class MaterialCreate(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = ""
+    division_id: Optional[str] = ""
+    material_type: Optional[str] = ""
+    composition: Optional[str] = ""
+    weight: Optional[str] = ""
+    width: Optional[str] = ""
+    supplier_id: Optional[str] = ""
+    unit_price: Optional[float] = 0
+    unit: Optional[str] = "meter"
+    color_ids: Optional[List[str]] = []
+    tags: Optional[List[str]] = []
+    certifications: Optional[List[str]] = []
+    custom_fields: Optional[Dict[str, Any]] = {}
+    status: Optional[str] = "active"
+    primary_image_url: Optional[str] = ""
+    media: Optional[List[Dict]] = []
+
+class MaterialResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    code: str
+    name: str
+    description: str
+    division_id: str
+    material_type: str
+    composition: str
+    weight: str
+    width: str
+    supplier_id: str
+    unit_price: float
+    unit: str
+    color_ids: List[str]
+    tags: List[str]
+    certifications: List[str]
+    custom_fields: Dict[str, Any]
+    status: str
+    primary_image_url: str
+    media: List[Dict]
     created_at: str
     updated_at: str
 
@@ -317,7 +443,6 @@ async def register(user: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create tenant if not provided
     if not user.tenant_id:
         tenant_id = str(uuid.uuid4())
         tenant_slug = user.email.split('@')[0].lower().replace('.', '-')
@@ -345,7 +470,7 @@ async def register(user: UserCreate):
     }
     await master_db.users.insert_one(user_doc)
     
-    # Initialize tenant database with default settings
+    # Initialize tenant database with default data
     tenant_db = get_tenant_db(tenant_id)
     await tenant_db.settings.insert_one({
         "id": str(uuid.uuid4()),
@@ -357,8 +482,17 @@ async def register(user: UserCreate):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
+    # Add default lifecycle stages
+    lifecycle_stages = ["concept", "development", "sampling", "production", "active", "discontinued"]
+    for stage in lifecycle_stages:
+        await tenant_db.lifecycle_stages.insert_one({
+            "id": str(uuid.uuid4()),
+            "name": stage.title(),
+            "code": stage,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
     token = create_token(user_id, tenant_id, user.email, user_doc["role"])
-    # Exclude _id and password from response
     user_response = {k: v for k, v in user_doc.items() if k not in ["password", "_id"]}
     return {"token": token, "user": user_response}
 
@@ -403,6 +537,69 @@ async def create_tenant(tenant: TenantCreate, current_user: dict = Depends(get_c
     await master_db.tenants.insert_one(tenant_doc)
     return tenant_doc
 
+# ==================== DIVISION ROUTES ====================
+
+@api_router.get("/divisions", response_model=List[DivisionResponse])
+async def get_divisions(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    divisions = await db.divisions.find({}, {"_id": 0}).to_list(1000)
+    return divisions
+
+@api_router.post("/divisions", response_model=DivisionResponse)
+async def create_division(division: DivisionCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    doc = {"id": str(uuid.uuid4()), **division.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.divisions.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.delete("/divisions/{division_id}")
+async def delete_division(division_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.divisions.delete_one({"id": division_id})
+    return {"status": "deleted"}
+
+# ==================== PRODUCT TYPE ROUTES ====================
+
+@api_router.get("/product-types", response_model=List[ProductTypeResponse])
+async def get_product_types(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    types = await db.product_types.find({}, {"_id": 0}).to_list(1000)
+    return types
+
+@api_router.post("/product-types", response_model=ProductTypeResponse)
+async def create_product_type(ptype: ProductTypeCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    doc = {"id": str(uuid.uuid4()), **ptype.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.product_types.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.delete("/product-types/{type_id}")
+async def delete_product_type(type_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.product_types.delete_one({"id": type_id})
+    return {"status": "deleted"}
+
+# ==================== SEASON ROUTES ====================
+
+@api_router.get("/seasons", response_model=List[SeasonResponse])
+async def get_seasons(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    seasons = await db.seasons.find({}, {"_id": 0}).to_list(1000)
+    return seasons
+
+@api_router.post("/seasons", response_model=SeasonResponse)
+async def create_season(season: SeasonCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    doc = {"id": str(uuid.uuid4()), **season.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.seasons.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.delete("/seasons/{season_id}")
+async def delete_season(season_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.seasons.delete_one({"id": season_id})
+    return {"status": "deleted"}
+
 # ==================== COLOR LIBRARY ROUTES ====================
 
 @api_router.get("/colors", response_model=List[ColorResponse])
@@ -414,29 +611,21 @@ async def get_colors(current_user: dict = Depends(get_current_user)):
 @api_router.post("/colors", response_model=ColorResponse)
 async def create_color(color: ColorCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    color_doc = {
-        "id": str(uuid.uuid4()),
-        **color.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    color_doc = {"id": str(uuid.uuid4()), **color.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.colors.insert_one(color_doc)
-    return color_doc
+    return {k: v for k, v in color_doc.items() if k != "_id"}
 
 @api_router.put("/colors/{color_id}", response_model=ColorResponse)
 async def update_color(color_id: str, color: ColorCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.colors.update_one({"id": color_id}, {"$set": color.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Color not found")
+    await db.colors.update_one({"id": color_id}, {"$set": color.model_dump()})
     updated = await db.colors.find_one({"id": color_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/colors/{color_id}")
 async def delete_color(color_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.colors.delete_one({"id": color_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Color not found")
+    await db.colors.delete_one({"id": color_id})
     return {"status": "deleted"}
 
 # ==================== SIZE LIBRARY ROUTES ====================
@@ -450,29 +639,21 @@ async def get_sizes(current_user: dict = Depends(get_current_user)):
 @api_router.post("/sizes", response_model=SizeResponse)
 async def create_size(size: SizeCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    size_doc = {
-        "id": str(uuid.uuid4()),
-        **size.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    size_doc = {"id": str(uuid.uuid4()), **size.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.sizes.insert_one(size_doc)
-    return size_doc
+    return {k: v for k, v in size_doc.items() if k != "_id"}
 
 @api_router.put("/sizes/{size_id}", response_model=SizeResponse)
 async def update_size(size_id: str, size: SizeCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.sizes.update_one({"id": size_id}, {"$set": size.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Size not found")
+    await db.sizes.update_one({"id": size_id}, {"$set": size.model_dump()})
     updated = await db.sizes.find_one({"id": size_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/sizes/{size_id}")
 async def delete_size(size_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.sizes.delete_one({"id": size_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Size not found")
+    await db.sizes.delete_one({"id": size_id})
     return {"status": "deleted"}
 
 # ==================== CUSTOM FIELDS LIBRARY ROUTES ====================
@@ -486,29 +667,21 @@ async def get_custom_fields(current_user: dict = Depends(get_current_user)):
 @api_router.post("/custom-fields", response_model=CustomFieldResponse)
 async def create_custom_field(field: CustomFieldCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    field_doc = {
-        "id": str(uuid.uuid4()),
-        **field.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    field_doc = {"id": str(uuid.uuid4()), **field.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.custom_fields.insert_one(field_doc)
-    return field_doc
+    return {k: v for k, v in field_doc.items() if k != "_id"}
 
 @api_router.put("/custom-fields/{field_id}", response_model=CustomFieldResponse)
 async def update_custom_field(field_id: str, field: CustomFieldCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.custom_fields.update_one({"id": field_id}, {"$set": field.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Custom field not found")
+    await db.custom_fields.update_one({"id": field_id}, {"$set": field.model_dump()})
     updated = await db.custom_fields.find_one({"id": field_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/custom-fields/{field_id}")
 async def delete_custom_field(field_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.custom_fields.delete_one({"id": field_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Custom field not found")
+    await db.custom_fields.delete_one({"id": field_id})
     return {"status": "deleted"}
 
 # ==================== SUPPLIER LIBRARY ROUTES ====================
@@ -522,29 +695,21 @@ async def get_suppliers(current_user: dict = Depends(get_current_user)):
 @api_router.post("/suppliers", response_model=SupplierResponse)
 async def create_supplier(supplier: SupplierCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    supplier_doc = {
-        "id": str(uuid.uuid4()),
-        **supplier.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    supplier_doc = {"id": str(uuid.uuid4()), **supplier.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.suppliers.insert_one(supplier_doc)
-    return supplier_doc
+    return {k: v for k, v in supplier_doc.items() if k != "_id"}
 
 @api_router.put("/suppliers/{supplier_id}", response_model=SupplierResponse)
 async def update_supplier(supplier_id: str, supplier: SupplierCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.suppliers.update_one({"id": supplier_id}, {"$set": supplier.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Supplier not found")
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": supplier.model_dump()})
     updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(supplier_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.suppliers.delete_one({"id": supplier_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Supplier not found")
+    await db.suppliers.delete_one({"id": supplier_id})
     return {"status": "deleted"}
 
 # ==================== BUYER LIBRARY ROUTES ====================
@@ -558,29 +723,21 @@ async def get_buyers(current_user: dict = Depends(get_current_user)):
 @api_router.post("/buyers", response_model=BuyerResponse)
 async def create_buyer(buyer: BuyerCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    buyer_doc = {
-        "id": str(uuid.uuid4()),
-        **buyer.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    buyer_doc = {"id": str(uuid.uuid4()), **buyer.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.buyers.insert_one(buyer_doc)
-    return buyer_doc
+    return {k: v for k, v in buyer_doc.items() if k != "_id"}
 
 @api_router.put("/buyers/{buyer_id}", response_model=BuyerResponse)
 async def update_buyer(buyer_id: str, buyer: BuyerCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.buyers.update_one({"id": buyer_id}, {"$set": buyer.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Buyer not found")
+    await db.buyers.update_one({"id": buyer_id}, {"$set": buyer.model_dump()})
     updated = await db.buyers.find_one({"id": buyer_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/buyers/{buyer_id}")
 async def delete_buyer(buyer_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.buyers.delete_one({"id": buyer_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Buyer not found")
+    await db.buyers.delete_one({"id": buyer_id})
     return {"status": "deleted"}
 
 # ==================== ASSET ROUTES ====================
@@ -612,7 +769,7 @@ async def create_asset(asset: AssetCreate, current_user: dict = Depends(get_curr
         "updated_at": now
     }
     await db.assets.insert_one(asset_doc)
-    return asset_doc
+    return {k: v for k, v in asset_doc.items() if k != "_id"}
 
 @api_router.put("/assets/{asset_id}", response_model=AssetResponse)
 async def update_asset(asset_id: str, asset: AssetCreate, current_user: dict = Depends(get_current_user)):
@@ -621,18 +778,14 @@ async def update_asset(asset_id: str, asset: AssetCreate, current_user: dict = D
     update_data["bom"] = [item.model_dump() if hasattr(item, 'model_dump') else item for item in asset.bom or []]
     update_data["measurements"] = [item.model_dump() if hasattr(item, 'model_dump') else item for item in asset.measurements or []]
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.assets.update_one({"id": asset_id}, {"$set": update_data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    await db.assets.update_one({"id": asset_id}, {"$set": update_data})
     updated = await db.assets.find_one({"id": asset_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/assets/{asset_id}")
 async def delete_asset(asset_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.assets.delete_one({"id": asset_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    await db.assets.delete_one({"id": asset_id})
     return {"status": "deleted"}
 
 # ==================== PRODUCT ROUTES ====================
@@ -664,7 +817,7 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
         "updated_at": now
     }
     await db.products.insert_one(product_doc)
-    return product_doc
+    return {k: v for k, v in product_doc.items() if k != "_id"}
 
 @api_router.put("/products/{product_id}", response_model=ProductResponse)
 async def update_product(product_id: str, product: ProductCreate, current_user: dict = Depends(get_current_user)):
@@ -673,18 +826,14 @@ async def update_product(product_id: str, product: ProductCreate, current_user: 
     update_data["bom"] = [item.model_dump() if hasattr(item, 'model_dump') else item for item in product.bom or []]
     update_data["measurements"] = [item.model_dump() if hasattr(item, 'model_dump') else item for item in product.measurements or []]
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.products.update_one({"id": product_id}, {"$set": update_data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Product not found")
+    await db.products.update_one({"id": product_id}, {"$set": update_data})
     updated = await db.products.find_one({"id": product_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.products.delete_one({"id": product_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Product not found")
+    await db.products.delete_one({"id": product_id})
     return {"status": "deleted"}
 
 # ==================== CONVERT ASSET TO PRODUCT ====================
@@ -699,27 +848,78 @@ async def convert_asset_to_product(asset_id: str, current_user: dict = Depends(g
     now = datetime.now(timezone.utc).isoformat()
     product_doc = {
         "id": str(uuid.uuid4()),
-        "name": asset["name"],
-        "sku": f"PRD-{asset['sku']}",
+        "code": f"PRD-{asset.get('code', '')}",
+        "name": asset.get("name", ""),
         "description": asset.get("description", ""),
-        "category": asset.get("category", ""),
+        "division_id": asset.get("division_id", ""),
+        "product_type_id": asset.get("product_type_id", ""),
+        "product_subtype_id": asset.get("product_subtype_id", ""),
+        "material_description": "",
+        "buyer_ids": [],
+        "supplier_id": asset.get("supplier_id", ""),
+        "season_id": "",
+        "lifecycle_stage": "concept",
+        "notes": "",
+        "tags": asset.get("tags", []),
         "color_ids": asset.get("color_ids", []),
         "size_ids": asset.get("size_ids", []),
-        "supplier_id": asset.get("supplier_id", ""),
-        "buyer_id": "",
+        "sku_variants": [],
         "custom_fields": asset.get("custom_fields", {}),
         "bom": asset.get("bom", []),
         "measurements": asset.get("measurements", []),
         "status": "draft",
-        "price": 0.0,
-        "cost": 0.0,
-        "image_url": asset.get("image_url", ""),
+        "primary_image_url": asset.get("primary_image_url", ""),
+        "media": asset.get("media", []),
         "source_asset_id": asset_id,
         "created_at": now,
         "updated_at": now
     }
     await db.products.insert_one(product_doc)
-    return product_doc
+    return {k: v for k, v in product_doc.items() if k != "_id"}
+
+# ==================== MATERIAL LIBRARY ROUTES ====================
+
+@api_router.get("/materials", response_model=List[MaterialResponse])
+async def get_materials(current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    materials = await db.materials.find({}, {"_id": 0}).to_list(1000)
+    return materials
+
+@api_router.get("/materials/{material_id}", response_model=MaterialResponse)
+async def get_material(material_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    material = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    if not material:
+        raise HTTPException(status_code=404, detail="Material not found")
+    return material
+
+@api_router.post("/materials", response_model=MaterialResponse)
+async def create_material(material: MaterialCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    now = datetime.now(timezone.utc).isoformat()
+    material_doc = {
+        "id": str(uuid.uuid4()),
+        **material.model_dump(),
+        "created_at": now,
+        "updated_at": now
+    }
+    await db.materials.insert_one(material_doc)
+    return {k: v for k, v in material_doc.items() if k != "_id"}
+
+@api_router.put("/materials/{material_id}", response_model=MaterialResponse)
+async def update_material(material_id: str, material: MaterialCreate, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    update_data = material.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.materials.update_one({"id": material_id}, {"$set": update_data})
+    updated = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/materials/{material_id}")
+async def delete_material(material_id: str, current_user: dict = Depends(get_current_user)):
+    db = get_tenant_db(current_user["tenant_id"])
+    await db.materials.delete_one({"id": material_id})
+    return {"status": "deleted"}
 
 # ==================== FORM LAYOUT ROUTES ====================
 
@@ -738,29 +938,21 @@ async def get_form_layouts_by_type(entity_type: str, current_user: dict = Depend
 @api_router.post("/form-layouts", response_model=FormLayoutResponse)
 async def create_form_layout(layout: FormLayoutCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    layout_doc = {
-        "id": str(uuid.uuid4()),
-        **layout.model_dump(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    layout_doc = {"id": str(uuid.uuid4()), **layout.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
     await db.form_layouts.insert_one(layout_doc)
-    return layout_doc
+    return {k: v for k, v in layout_doc.items() if k != "_id"}
 
 @api_router.put("/form-layouts/{layout_id}", response_model=FormLayoutResponse)
 async def update_form_layout(layout_id: str, layout: FormLayoutCreate, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.form_layouts.update_one({"id": layout_id}, {"$set": layout.model_dump()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Form layout not found")
+    await db.form_layouts.update_one({"id": layout_id}, {"$set": layout.model_dump()})
     updated = await db.form_layouts.find_one({"id": layout_id}, {"_id": 0})
     return updated
 
 @api_router.delete("/form-layouts/{layout_id}")
 async def delete_form_layout(layout_id: str, current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
-    result = await db.form_layouts.delete_one({"id": layout_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Form layout not found")
+    await db.form_layouts.delete_one({"id": layout_id})
     return {"status": "deleted"}
 
 # ==================== SYSTEM SETTINGS ROUTES ====================
@@ -770,13 +962,7 @@ async def get_settings(current_user: dict = Depends(get_current_user)):
     db = get_tenant_db(current_user["tenant_id"])
     settings = await db.settings.find_one({}, {"_id": 0})
     if not settings:
-        return {
-            "company_name": "",
-            "logo_url": "",
-            "default_currency": "USD",
-            "date_format": "YYYY-MM-DD",
-            "timezone": "UTC"
-        }
+        return {"company_name": "", "logo_url": "", "default_currency": "USD", "date_format": "YYYY-MM-DD", "timezone": "UTC"}
     return settings
 
 @api_router.put("/settings")
@@ -802,158 +988,212 @@ async def generate_ai_data(request: AIGenerateRequest, current_user: dict = Depe
         Generate helpful, realistic data for {request.entity_type} attributes.
         Be concise and professional. Return only the requested data without explanations."""
         
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"gen_{uuid.uuid4()}",
-            system_message=system_prompt
-        ).with_model("openai", "gpt-5.2")
+        chat = LlmChat(api_key=api_key, session_id=f"gen_{uuid.uuid4()}", system_message=system_prompt).with_model("openai", "gpt-5.2")
         
         prompt = f"Context: {request.context}"
         if request.field_name:
             prompt += f"\nGenerate a value for the field: {request.field_name}"
         
-        user_message = UserMessage(text=prompt)
-        response = await chat.send_message(user_message)
-        
+        response = await chat.send_message(UserMessage(text=prompt))
         return {"generated": response, "field_name": request.field_name}
-    except ImportError:
-        raise HTTPException(status_code=500, detail="AI service not available")
     except Exception as e:
         logger.error(f"AI generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
-# ==================== IMAGE UPLOAD & AI ANALYSIS ====================
+# ==================== MEDIA UPLOAD ROUTES ====================
 
-@api_router.post("/assets/upload-image")
-async def upload_image_create_asset(
+@api_router.post("/upload/media")
+async def upload_media(
     file: UploadFile = File(...),
+    entity_type: str = Form("asset"),
+    entity_id: str = Form(""),
     current_user: dict = Depends(get_current_user)
 ):
-    """Upload an image and create an asset with AI-generated attributes"""
+    """Upload media file (image/video) for assets, products, or materials"""
     try:
-        # Validate file type
+        allowed_image_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+        allowed_video_types = ["video/mp4", "video/webm", "video/quicktime"]
+        allowed_types = allowed_image_types + allowed_video_types
+        
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
+        
+        file_data = await file.read()
+        if len(file_data) > 50 * 1024 * 1024:  # 50MB limit
+            raise HTTPException(status_code=400, detail="File too large. Max 50MB.")
+        
+        file_base64 = base64.b64encode(file_data).decode('utf-8')
+        media_url = f"data:{file.content_type};base64,{file_base64}"
+        
+        media_type = "video" if file.content_type in allowed_video_types else "image"
+        
+        media_item = {
+            "id": str(uuid.uuid4()),
+            "url": media_url,
+            "type": media_type,
+            "filename": file.filename,
+            "is_primary": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # If entity_id provided, add to that entity
+        if entity_id:
+            db = get_tenant_db(current_user["tenant_id"])
+            collection = db[f"{entity_type}s"]
+            await collection.update_one({"id": entity_id}, {"$push": {"media": media_item}})
+        
+        return {"media": media_item, "message": "Media uploaded successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Media upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload media: {str(e)}")
+
+@api_router.post("/upload/image-analyze")
+async def upload_and_analyze_image(
+    file: UploadFile = File(...),
+    entity_type: str = Form("asset"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload an image and create entity with AI-generated attributes"""
+    try:
         allowed_types = ["image/jpeg", "image/png", "image/webp"]
         if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid file type. Allowed: JPEG, PNG, WEBP. Got: {file.content_type}"
-            )
+            raise HTTPException(status_code=400, detail=f"Invalid file type. Allowed: JPEG, PNG, WEBP")
         
-        # Read and encode image
         image_data = await file.read()
-        if len(image_data) > 10 * 1024 * 1024:  # 10MB limit
+        if len(image_data) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File too large. Max 10MB.")
         
         image_base64 = base64.b64encode(image_data).decode('utf-8')
         
-        # Get AI analysis
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="AI service not configured")
         
-        system_prompt = """You are an expert product analyst. Analyze the uploaded image and extract product/asset attributes.
-        Return ONLY valid JSON (no markdown, no explanation) in this exact format:
+        system_prompt = """You are an expert product analyst. Analyze the uploaded image and extract attributes.
+        Return ONLY valid JSON in this exact format:
         {
-            "name": "descriptive product name",
-            "sku": "SHORT-SKU-123",
-            "description": "detailed description of the item",
-            "category": "main category",
+            "name": "descriptive name",
+            "code": "SHORT-CODE",
+            "description": "detailed description",
+            "division": "suggested division",
+            "product_type": "main type",
+            "product_subtype": "subtype",
             "detected_colors": ["color1", "color2"],
-            "materials": ["material1", "material2"],
-            "estimated_dimensions": "dimensions if visible",
-            "style": "design style",
-            "suggested_tags": ["tag1", "tag2", "tag3"]
+            "materials": ["material1"],
+            "tags": ["tag1", "tag2"],
+            "style": "design style"
         }"""
         
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"img_analysis_{uuid.uuid4()}",
-            system_message=system_prompt
-        ).with_model("openai", "gpt-5.2")
+        chat = LlmChat(api_key=api_key, session_id=f"img_{uuid.uuid4()}", system_message=system_prompt).with_model("openai", "gpt-5.2")
         
-        # Create message with image
         image_content = ImageContent(image_base64=image_base64)
-        user_message = UserMessage(
-            text="Analyze this product/asset image and extract all relevant attributes. Return only JSON.",
-            file_contents=[image_content]
-        )
+        response = await chat.send_message(UserMessage(text="Analyze this image and extract product attributes. Return only JSON.", file_contents=[image_content]))
         
-        response = await chat.send_message(user_message)
-        
-        # Parse AI response
         try:
-            # Clean the response - remove markdown code blocks if present
             clean_response = response.strip()
             if clean_response.startswith("```"):
                 clean_response = clean_response.split("```")[1]
                 if clean_response.startswith("json"):
                     clean_response = clean_response[4:]
-            clean_response = clean_response.strip()
-            
-            ai_data = json.loads(clean_response)
+            ai_data = json.loads(clean_response.strip())
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse AI response: {response}")
-            ai_data = {
-                "name": "Uploaded Asset",
-                "sku": f"ASSET-{uuid.uuid4().hex[:8].upper()}",
-                "description": response[:500] if response else "Asset from uploaded image",
-                "category": "Uncategorized",
-                "detected_colors": [],
-                "materials": [],
-                "style": "",
-                "suggested_tags": []
-            }
+            ai_data = {"name": "Uploaded Item", "code": f"ITEM-{uuid.uuid4().hex[:6].upper()}", "description": response[:500] if response else "", "tags": []}
         
-        # Store image as base64 data URL
         mime_type = file.content_type
         image_url = f"data:{mime_type};base64,{image_base64}"
         
-        # Create asset in database
         db = get_tenant_db(current_user["tenant_id"])
         now = datetime.now(timezone.utc).isoformat()
         
-        asset_doc = {
-            "id": str(uuid.uuid4()),
-            "name": ai_data.get("name", "Uploaded Asset"),
-            "sku": ai_data.get("sku", f"ASSET-{uuid.uuid4().hex[:8].upper()}"),
-            "description": ai_data.get("description", ""),
-            "category": ai_data.get("category", ""),
-            "color_ids": [],
-            "size_ids": [],
-            "supplier_id": "",
-            "custom_fields": {
-                "detected_colors": ai_data.get("detected_colors", []),
-                "materials": ai_data.get("materials", []),
-                "estimated_dimensions": ai_data.get("estimated_dimensions", ""),
-                "style": ai_data.get("style", ""),
-                "suggested_tags": ai_data.get("suggested_tags", [])
-            },
-            "bom": [],
-            "measurements": [],
-            "status": "draft",
-            "image_url": image_url,
-            "created_at": now,
-            "updated_at": now
-        }
+        if entity_type == "material":
+            doc = {
+                "id": str(uuid.uuid4()),
+                "code": ai_data.get("code", f"MAT-{uuid.uuid4().hex[:6].upper()}"),
+                "name": ai_data.get("name", "Uploaded Material"),
+                "description": ai_data.get("description", ""),
+                "division_id": "",
+                "material_type": ai_data.get("product_type", ""),
+                "composition": ", ".join(ai_data.get("materials", [])),
+                "weight": "",
+                "width": "",
+                "supplier_id": "",
+                "unit_price": 0,
+                "unit": "meter",
+                "color_ids": [],
+                "tags": ai_data.get("tags", []),
+                "certifications": [],
+                "custom_fields": {"detected_colors": ai_data.get("detected_colors", []), "style": ai_data.get("style", "")},
+                "status": "active",
+                "primary_image_url": image_url,
+                "media": [{"id": str(uuid.uuid4()), "url": image_url, "type": "image", "filename": file.filename, "is_primary": True}],
+                "created_at": now,
+                "updated_at": now
+            }
+            await db.materials.insert_one(doc)
+        elif entity_type == "product":
+            doc = {
+                "id": str(uuid.uuid4()),
+                "code": ai_data.get("code", f"PRD-{uuid.uuid4().hex[:6].upper()}"),
+                "name": ai_data.get("name", "Uploaded Product"),
+                "description": ai_data.get("description", ""),
+                "division_id": "",
+                "product_type_id": "",
+                "product_subtype_id": "",
+                "material_description": ", ".join(ai_data.get("materials", [])),
+                "buyer_ids": [],
+                "supplier_id": "",
+                "season_id": "",
+                "lifecycle_stage": "concept",
+                "notes": "",
+                "tags": ai_data.get("tags", []),
+                "color_ids": [],
+                "size_ids": [],
+                "sku_variants": [],
+                "custom_fields": {"detected_colors": ai_data.get("detected_colors", []), "style": ai_data.get("style", "")},
+                "bom": [],
+                "measurements": [],
+                "status": "draft",
+                "primary_image_url": image_url,
+                "media": [{"id": str(uuid.uuid4()), "url": image_url, "type": "image", "filename": file.filename, "is_primary": True}],
+                "source_asset_id": "",
+                "created_at": now,
+                "updated_at": now
+            }
+            await db.products.insert_one(doc)
+        else:  # asset
+            doc = {
+                "id": str(uuid.uuid4()),
+                "code": ai_data.get("code", f"AST-{uuid.uuid4().hex[:6].upper()}"),
+                "name": ai_data.get("name", "Uploaded Asset"),
+                "description": ai_data.get("description", ""),
+                "division_id": "",
+                "product_type_id": "",
+                "product_subtype_id": "",
+                "tags": ai_data.get("tags", []),
+                "color_ids": [],
+                "size_ids": [],
+                "supplier_id": "",
+                "custom_fields": {"detected_colors": ai_data.get("detected_colors", []), "materials": ai_data.get("materials", []), "style": ai_data.get("style", "")},
+                "bom": [],
+                "measurements": [],
+                "status": "draft",
+                "primary_image_url": image_url,
+                "media": [{"id": str(uuid.uuid4()), "url": image_url, "type": "image", "filename": file.filename, "is_primary": True}],
+                "created_at": now,
+                "updated_at": now
+            }
+            await db.assets.insert_one(doc)
         
-        await db.assets.insert_one(asset_doc)
-        
-        # Return without _id
-        asset_response = {k: v for k, v in asset_doc.items() if k != "_id"}
-        
-        return {
-            "asset": asset_response,
-            "ai_analysis": ai_data,
-            "message": "Asset created successfully from image"
-        }
-        
+        return {"entity": {k: v for k, v in doc.items() if k != "_id"}, "ai_analysis": ai_data, "entity_type": entity_type}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Image upload error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
+        logger.error(f"Image analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze image: {str(e)}")
 
 # ==================== DASHBOARD STATS ====================
 
@@ -963,16 +1203,16 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     
     assets_count = await db.assets.count_documents({})
     products_count = await db.products.count_documents({})
+    materials_count = await db.materials.count_documents({})
     suppliers_count = await db.suppliers.count_documents({})
     buyers_count = await db.buyers.count_documents({})
     colors_count = await db.colors.count_documents({})
     sizes_count = await db.sizes.count_documents({})
     
-    # Get recent assets
     recent_assets = await db.assets.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     recent_products = await db.products.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    recent_materials = await db.materials.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
-    # Assets by status
     assets_by_status = {}
     async for doc in db.assets.aggregate([{"$group": {"_id": "$status", "count": {"$sum": 1}}}]):
         assets_by_status[doc["_id"] or "unknown"] = doc["count"]
@@ -985,6 +1225,7 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         "counts": {
             "assets": assets_count,
             "products": products_count,
+            "materials": materials_count,
             "suppliers": suppliers_count,
             "buyers": buyers_count,
             "colors": colors_count,
@@ -992,6 +1233,7 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         },
         "recent_assets": recent_assets,
         "recent_products": recent_products,
+        "recent_materials": recent_materials,
         "assets_by_status": assets_by_status,
         "products_by_status": products_by_status
     }
@@ -1025,7 +1267,7 @@ async def create_user(user: UserCreate, current_user: dict = Depends(get_current
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await master_db.users.insert_one(user_doc)
-    return {k: v for k, v in user_doc.items() if k != "password"}
+    return {k: v for k, v in user_doc.items() if k not in ["password", "_id"]}
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
@@ -1033,13 +1275,10 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
         raise HTTPException(status_code=403, detail="Admin access required")
     if user_id == current_user["user_id"]:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
-    
-    result = await master_db.users.delete_one({"id": user_id, "tenant_id": current_user["tenant_id"]})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+    await master_db.users.delete_one({"id": user_id, "tenant_id": current_user["tenant_id"]})
     return {"status": "deleted"}
 
-# Include the router in the main app
+# Include the router
 app.include_router(api_router)
 
 app.add_middleware(
