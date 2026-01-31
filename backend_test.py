@@ -92,15 +92,15 @@ class AssetProductAPITester:
             return True
         return False
 
-    def test_login(self):
-        """Test user login with test credentials"""
+    def test_specific_login(self):
+        """Test login with specific test credentials from review request"""
         login_data = {
             "email": "test@example.com",
             "password": "test123"
         }
         
         success, response = self.run_test(
-            "User Login",
+            "Login with test@example.com",
             "POST",
             "auth/login",
             200,
@@ -111,6 +111,7 @@ class AssetProductAPITester:
             self.token = response['token']
             self.user_id = response['user']['id']
             self.tenant_id = response['user']['tenant_id']
+            print(f"   Successfully logged in as: {login_data['email']}")
             return True
         return False
 
