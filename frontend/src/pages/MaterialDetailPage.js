@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
-import { ArrowLeft, Save, Trash2, Upload, Image, ExternalLink, Plus, X, DollarSign } from 'lucide-react';
+import FullScreenHeader from '../components/FullScreenHeader';
+import { Save, Trash2, Upload, Image, Plus, X, DollarSign } from 'lucide-react';
 
 const MaterialDetailPage = () => {
   const { id } = useParams();
