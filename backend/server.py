@@ -211,16 +211,26 @@ class MediaItem(BaseModel):
     is_primary: bool = False
 
 class BOMItem(BaseModel):
-    component_id: str
-    component_name: str
-    quantity: float
-    unit: str
+    id: str = ""
+    material_id: str = ""
+    material_code: str = ""
+    material_name: str = ""
+    quantity: float = 0
+    unit: str = "meter"
+    unit_cost: float = 0
+    total_cost: float = 0
     notes: Optional[str] = ""
 
+class MeasurementPoint(BaseModel):
+    name: str
+    value: float
+
 class MeasurementItem(BaseModel):
+    id: str = ""
     size_id: str
     size_name: str
-    measurements: Dict[str, float]
+    size_code: str = ""
+    measurements: Dict[str, float] = {}
 
 class SKUVariant(BaseModel):
     id: str
