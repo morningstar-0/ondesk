@@ -66,6 +66,15 @@ const AssetsPage = () => {
     }
   };
 
+  const handleRowClick = (e, assetId) => {
+    // Check if Ctrl (Windows) or Cmd (Mac) is pressed
+    if (e.ctrlKey || e.metaKey) {
+      window.open(`/assets/${assetId}`, '_blank');
+    } else {
+      navigate(`/assets/${assetId}`);
+    }
+  };
+
   const filteredAssets = assets.filter(a =>
     a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.code?.toLowerCase().includes(searchTerm.toLowerCase())
