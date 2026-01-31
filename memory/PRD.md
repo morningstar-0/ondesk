@@ -75,3 +75,28 @@ Create a tenant-based asset and product management software with:
 ## Test Credentials
 - Email: test@example.com
 - Password: test123
+
+## Update: Jan 31, 2026 - Image Upload with AI Analysis
+
+### New Feature Implemented
+- **Image Upload for Assets**: Users can now upload images (JPEG, PNG, WEBP) to create assets
+- **AI Vision Analysis**: GPT-5.2 vision model analyzes uploaded images and automatically extracts:
+  - Product/asset name
+  - Description
+  - Category
+  - Detected colors
+  - Materials
+  - Style
+  - Suggested tags
+- **Asset Creation**: New assets are created with AI-generated attributes and image thumbnail
+
+### API Endpoint
+- `POST /api/assets/upload-image` - Accepts multipart/form-data with 'file' field
+- Returns: Created asset with AI analysis results
+
+### Frontend Changes
+- Added "Upload Image" button on Assets page
+- Upload dialog with image preview
+- Progress indicator during upload/analysis
+- AI analysis results display
+- Image thumbnails in assets table
