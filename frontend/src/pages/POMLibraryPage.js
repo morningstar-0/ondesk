@@ -1,15 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Ruler, Search, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Ruler, Search, Check, X } from 'lucide-react';
 
 const categories = [
   { value: 'general', label: 'General' },
@@ -22,9 +19,9 @@ const categories = [
 ];
 
 const units = [
-  { value: 'cm', label: 'Centimeters (cm)' },
-  { value: 'in', label: 'Inches (in)' },
-  { value: 'mm', label: 'Millimeters (mm)' }
+  { value: 'cm', label: 'cm' },
+  { value: 'in', label: 'in' },
+  { value: 'mm', label: 'mm' }
 ];
 
 const POMLibraryPage = () => {
@@ -32,16 +29,8 @@ const POMLibraryPage = () => {
   const [pomList, setPomList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPom, setEditingPom] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    description: '',
-    category: 'general',
-    unit: 'cm',
-    sort_order: 0
-  });
+  const [editingId, setEditingId] = useState(null);
+  const inputRefs = useRef({});
 
   const fetchPomList = useCallback(async () => {
     try {
@@ -58,65 +47,110 @@ const POMLibraryPage = () => {
     fetchPomList();
   }, [fetchPomList]);
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
+  const addNewRow = () => {
+    const newPom = {
+      id: `new-${Date.now()}`,
       code: '',
+      name: '',
       description: '',
       category: 'general',
       unit: 'cm',
-      sort_order: pomList.length
-    });
-    setEditingPom(null);
+      sort_order: pomList.length,
+      isNew: true
+    };
+    setPomList([...pomList, newPom]);
+    setEditingId(newPom.id);
+    
+    setTimeout(() => {
+      if (inputRefs.current[`${newPom.id}-code`]) {
+        inputRefs.current[`${newPom.id}-code`].focus();
+      }
+    }, 100);
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setIsDialogOpen(true);
+  const updateLocalPom = (pomId, field, value) => {
+    setPomList(pomList.map(p => 
+      p.id === pomId ? { ...p, [field]: value } : p
+    ));
   };
 
-  const openEditDialog = (pom) => {
-    setFormData({
-      name: pom.name,
-      code: pom.code,
-      description: pom.description || '',
-      category: pom.category || 'general',
-      unit: pom.unit || 'cm',
-      sort_order: pom.sort_order || 0
-    });
-    setEditingPom(pom);
-    setIsDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!formData.name.trim() || !formData.code.trim()) {
-      toast.error('Name and Code are required');
+  const confirmRow = async (pomId) => {
+    const pom = pomList.find(p => p.id === pomId);
+    if (!pom) return;
+    
+    if (!pom.code.trim() || !pom.name.trim()) {
+      toast.error('Code and Name are required');
       return;
     }
 
     try {
-      if (editingPom) {
-        await api.put(`/pom/${editingPom.id}`, formData);
-        toast.success('Point of Measurement updated');
+      if (pom.isNew) {
+        const response = await api.post('/pom', {
+          code: pom.code,
+          name: pom.name,
+          description: pom.description,
+          category: pom.category,
+          unit: pom.unit,
+          sort_order: pom.sort_order
+        });
+        // Replace temp ID with real ID
+        setPomList(pomList.map(p => 
+          p.id === pomId ? { ...response.data, isNew: false } : p
+        ));
+        toast.success('POM created');
       } else {
-        await api.post('/pom', formData);
-        toast.success('Point of Measurement created');
+        await api.put(`/pom/${pomId}`, {
+          code: pom.code,
+          name: pom.name,
+          description: pom.description,
+          category: pom.category,
+          unit: pom.unit,
+          sort_order: pom.sort_order
+        });
+        setPomList(pomList.map(p => 
+          p.id === pomId ? { ...p, isNew: false } : p
+        ));
+        toast.success('POM updated');
       }
-      setIsDialogOpen(false);
-      fetchPomList();
+      setEditingId(null);
     } catch (error) {
-      toast.error('Failed to save');
+      toast.error('Failed to save POM');
     }
   };
 
-  const handleDelete = async (pom) => {
-    if (!window.confirm(`Delete "${pom.name}"?`)) return;
-    try {
-      await api.delete(`/pom/${pom.id}`);
-      toast.success('Deleted');
+  const cancelRow = (pomId) => {
+    const pom = pomList.find(p => p.id === pomId);
+    if (pom?.isNew) {
+      setPomList(pomList.filter(p => p.id !== pomId));
+    } else {
+      // Reload to discard changes
       fetchPomList();
+    }
+    setEditingId(null);
+  };
+
+  const handleDelete = async (pomId) => {
+    const pom = pomList.find(p => p.id === pomId);
+    if (pom?.isNew) {
+      setPomList(pomList.filter(p => p.id !== pomId));
+      return;
+    }
+    
+    if (!window.confirm('Delete this measurement point?')) return;
+    try {
+      await api.delete(`/pom/${pomId}`);
+      setPomList(pomList.filter(p => p.id !== pomId));
+      toast.success('Deleted');
     } catch (error) {
       toast.error('Failed to delete');
+    }
+  };
+
+  const handleKeyDown = (e, pomId) => {
+    if (e.key === 'Enter') {
+      confirmRow(pomId);
+    } else if (e.key === 'Escape') {
+      cancelRow(pomId);
     }
   };
 
@@ -146,7 +180,7 @@ const POMLibraryPage = () => {
           <h1 className="text-2xl font-bold font-['Public_Sans']">Points of Measurement</h1>
           <p className="text-muted-foreground">Define measurement points for your products</p>
         </div>
-        <Button onClick={openCreateDialog} data-testid="create-pom-btn">
+        <Button onClick={addNewRow} data-testid="create-pom-btn">
           <Plus className="mr-2 h-4 w-4" />
           Add Measurement Point
         </Button>
@@ -165,172 +199,186 @@ const POMLibraryPage = () => {
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              {filteredList.length} measurement point{filteredList.length !== 1 ? 's' : ''}
+              {filteredList.filter(p => !p.isNew).length} measurement point{filteredList.filter(p => !p.isNew).length !== 1 ? 's' : ''}
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">#</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : filteredList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    <Ruler className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground">No measurement points found</p>
-                    <Button variant="outline" size="sm" className="mt-4" onClick={openCreateDialog}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add your first point
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredList.map((pom, index) => (
-                  <TableRow key={pom.id} className="group">
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100" />
-                        {index + 1}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{pom.code}</TableCell>
-                    <TableCell className="font-medium">{pom.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={getCategoryColor(pom.category)}>
-                        {pom.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{pom.unit}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
-                      {pom.description || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(pom)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(pom)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="bg-slate-50 border-b text-xs text-slate-500 uppercase tracking-wider">
+                  <th className="w-12 px-3 py-3 text-left">#</th>
+                  <th className="w-28 px-3 py-3 text-left">Code</th>
+                  <th className="min-w-[180px] px-3 py-3 text-left">Name</th>
+                  <th className="w-32 px-3 py-3 text-left">Category</th>
+                  <th className="w-20 px-3 py-3 text-left">Unit</th>
+                  <th className="min-w-[200px] px-3 py-3 text-left">Description</th>
+                  <th className="w-24 px-3 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="h-24 text-center">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : filteredList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="h-24 text-center">
+                      <Ruler className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">No measurement points found</p>
+                      <Button variant="outline" size="sm" className="mt-4" onClick={addNewRow}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add your first point
+                      </Button>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredList.map((pom, index) => {
+                    const isEditing = editingId === pom.id || pom.isNew;
+                    
+                    return (
+                      <tr 
+                        key={pom.id} 
+                        className={`border-b border-slate-100 transition-colors ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                        } ${isEditing ? 'bg-yellow-50' : 'hover:bg-slate-50'}`}
+                        onDoubleClick={() => setEditingId(pom.id)}
+                      >
+                        <td className="w-12 px-3 py-2 text-muted-foreground text-sm">
+                          {index + 1}
+                        </td>
+                        <td className="w-28 px-3 py-2">
+                          {isEditing ? (
+                            <Input
+                              ref={el => inputRefs.current[`${pom.id}-code`] = el}
+                              value={pom.code || ''}
+                              onChange={(e) => updateLocalPom(pom.id, 'code', e.target.value.toUpperCase())}
+                              onKeyDown={(e) => handleKeyDown(e, pom.id)}
+                              className="h-8 font-mono text-sm"
+                              placeholder="CODE"
+                            />
+                          ) : (
+                            <span className="font-mono text-sm">{pom.code}</span>
+                          )}
+                        </td>
+                        <td className="min-w-[180px] px-3 py-2">
+                          {isEditing ? (
+                            <Input
+                              value={pom.name || ''}
+                              onChange={(e) => updateLocalPom(pom.id, 'name', e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, pom.id)}
+                              className="h-8 text-sm"
+                              placeholder="Measurement name"
+                            />
+                          ) : (
+                            <span className="font-medium">{pom.name}</span>
+                          )}
+                        </td>
+                        <td className="w-32 px-3 py-2">
+                          {isEditing ? (
+                            <Select
+                              value={pom.category || 'general'}
+                              onValueChange={(v) => updateLocalPom(pom.id, 'category', v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(c => (
+                                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="secondary" className={getCategoryColor(pom.category)}>
+                              {pom.category}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="w-20 px-3 py-2">
+                          {isEditing ? (
+                            <Select
+                              value={pom.unit || 'cm'}
+                              onValueChange={(v) => updateLocalPom(pom.id, 'unit', v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {units.map(u => (
+                                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm">{pom.unit}</span>
+                          )}
+                        </td>
+                        <td className="min-w-[200px] px-3 py-2">
+                          {isEditing ? (
+                            <Input
+                              value={pom.description || ''}
+                              onChange={(e) => updateLocalPom(pom.id, 'description', e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, pom.id)}
+                              className="h-8 text-sm"
+                              placeholder="Description"
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-sm truncate block max-w-[200px]">
+                              {pom.description || '-'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="w-24 px-3 py-2">
+                          <div className="flex items-center justify-center gap-1">
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => confirmRow(pom.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-slate-400 hover:text-slate-600"
+                                  onClick={() => cancelRow(pom.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-slate-400 hover:text-red-500"
+                                onClick={() => handleDelete(pom.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer */}
+          <div className="px-4 py-3 bg-slate-50 border-t text-xs text-slate-500">
+            Double-click row to edit • Enter to confirm • Esc to cancel
+          </div>
         </CardContent>
       </Card>
-
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingPom ? 'Edit Measurement Point' : 'New Measurement Point'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Code *</Label>
-                <Input
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g., CHEST"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Chest Width"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(v) => setFormData({ ...formData, category: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Unit</Label>
-                <Select
-                  value={formData.unit}
-                  onValueChange={(v) => setFormData({ ...formData, unit: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(u => (
-                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="How to measure this point..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Sort Order</Label>
-              <Input
-                type="number"
-                value={formData.sort_order}
-                onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              {editingPom ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
