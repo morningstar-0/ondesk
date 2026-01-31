@@ -57,6 +57,9 @@ Create a tenant-based asset and product management software with:
 - **Ctrl/Cmd+Click support to open items in new tabs**
 - **BOM (Bill of Materials) subform** - Sources materials from Materials library, calculates costs
 - **Measurement Chart subform** - Configurable measurement points with Size library integration
+- **POM (Points of Measurement) Library** - Define reusable measurement points with category and unit
+- **Code Configuration** - Auto-generate codes for Assets, Products, Materials, Colors with customizable prefix/separator/date/sequence
+- **AG Grid-like styling** for BOM and Measurement panels with inline editing and keyboard navigation
 
 ## Bug Fixes Applied (Jan 31, 2026)
 1. **Backend Validation Errors**: Fixed Pydantic models to have default values for all fields, ensuring backward compatibility with older database records
