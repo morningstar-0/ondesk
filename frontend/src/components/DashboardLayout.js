@@ -29,7 +29,9 @@ import {
   LogOut,
   ChevronDown,
   Menu,
-  X
+  X,
+  Hash,
+  Ruler2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -41,10 +43,12 @@ const navigation = [
   { type: 'separator', label: 'Libraries' },
   { name: 'Colors', href: '/libraries/colors', icon: Palette },
   { name: 'Sizes', href: '/libraries/sizes', icon: Ruler },
+  { name: 'POM', href: '/libraries/pom', icon: Ruler2 },
   { name: 'Custom Fields', href: '/libraries/custom-fields', icon: FileText },
   { name: 'Suppliers', href: '/libraries/suppliers', icon: Truck },
   { name: 'Buyers', href: '/libraries/buyers', icon: Building2 },
   { type: 'separator', label: 'Admin' },
+  { name: 'Code Config', href: '/admin/code-config', icon: Hash },
   { name: 'Form Builder', href: '/form-builder', icon: FileText },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
