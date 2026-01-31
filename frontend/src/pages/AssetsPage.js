@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,9 +7,10 @@ import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
-import { Plus, Search, MoreVertical, Pencil, Trash2, ArrowRightLeft, Upload, Package, Image } from 'lucide-react';
+import { Plus, Search, MoreVertical, Pencil, Trash2, ArrowRightLeft, Upload, Package, Image, ExternalLink } from 'lucide-react';
 
 const AssetsPage = () => {
   const { api } = useAuth();
