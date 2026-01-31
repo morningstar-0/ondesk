@@ -690,6 +690,22 @@ const ProductDetailPage = () => {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="bom" className="mt-4">
+                <BOMPanel
+                  bom={formData.bom || []}
+                  onChange={(bom) => setFormData({ ...formData, bom })}
+                  materials={materials}
+                />
+              </TabsContent>
+
+              <TabsContent value="measurements" className="mt-4">
+                <MeasurementChartPanel
+                  measurements={formData.measurements || []}
+                  onChange={(measurements) => setFormData({ ...formData, measurements })}
+                  sizes={sizes}
+                />
+              </TabsContent>
+
               <TabsContent value="notes" className="mt-4">
                 <Card>
                   <CardContent className="pt-6">
