@@ -509,6 +509,8 @@ const AssetDetailPage = () => {
                   bom={formData.bom || []}
                   onChange={(bom) => setFormData({ ...formData, bom })}
                   materials={materials}
+                  colors={colors}
+                  sizes={sizes}
                 />
               </TabsContent>
 
