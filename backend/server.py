@@ -822,6 +822,139 @@ async def generate_ai_data(request: AIGenerateRequest, current_user: dict = Depe
         logger.error(f"AI generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
+# ==================== IMAGE UPLOAD & AI ANALYSIS ====================
+
+@api_router.post("/assets/upload-image")
+async def upload_image_create_asset(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload an image and create an asset with AI-generated attributes"""
+    try:
+        # Validate file type
+        allowed_types = ["image/jpeg", "image/png", "image/webp"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid file type. Allowed: JPEG, PNG, WEBP. Got: {file.content_type}"
+            )
+        
+        # Read and encode image
+        image_data = await file.read()
+        if len(image_data) > 10 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(status_code=400, detail="File too large. Max 10MB.")
+        
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
+        # Get AI analysis
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="AI service not configured")
+        
+        system_prompt = """You are an expert product analyst. Analyze the uploaded image and extract product/asset attributes.
+        Return ONLY valid JSON (no markdown, no explanation) in this exact format:
+        {
+            "name": "descriptive product name",
+            "sku": "SHORT-SKU-123",
+            "description": "detailed description of the item",
+            "category": "main category",
+            "detected_colors": ["color1", "color2"],
+            "materials": ["material1", "material2"],
+            "estimated_dimensions": "dimensions if visible",
+            "style": "design style",
+            "suggested_tags": ["tag1", "tag2", "tag3"]
+        }"""
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"img_analysis_{uuid.uuid4()}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-5.2")
+        
+        # Create message with image
+        image_content = ImageContent(image_base64=image_base64)
+        user_message = UserMessage(
+            text="Analyze this product/asset image and extract all relevant attributes. Return only JSON.",
+            file_contents=[image_content]
+        )
+        
+        response = await chat.send_message(user_message)
+        
+        # Parse AI response
+        try:
+            # Clean the response - remove markdown code blocks if present
+            clean_response = response.strip()
+            if clean_response.startswith("```"):
+                clean_response = clean_response.split("```")[1]
+                if clean_response.startswith("json"):
+                    clean_response = clean_response[4:]
+            clean_response = clean_response.strip()
+            
+            ai_data = json.loads(clean_response)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse AI response: {response}")
+            ai_data = {
+                "name": "Uploaded Asset",
+                "sku": f"ASSET-{uuid.uuid4().hex[:8].upper()}",
+                "description": response[:500] if response else "Asset from uploaded image",
+                "category": "Uncategorized",
+                "detected_colors": [],
+                "materials": [],
+                "style": "",
+                "suggested_tags": []
+            }
+        
+        # Store image as base64 data URL
+        mime_type = file.content_type
+        image_url = f"data:{mime_type};base64,{image_base64}"
+        
+        # Create asset in database
+        db = get_tenant_db(current_user["tenant_id"])
+        now = datetime.now(timezone.utc).isoformat()
+        
+        asset_doc = {
+            "id": str(uuid.uuid4()),
+            "name": ai_data.get("name", "Uploaded Asset"),
+            "sku": ai_data.get("sku", f"ASSET-{uuid.uuid4().hex[:8].upper()}"),
+            "description": ai_data.get("description", ""),
+            "category": ai_data.get("category", ""),
+            "color_ids": [],
+            "size_ids": [],
+            "supplier_id": "",
+            "custom_fields": {
+                "detected_colors": ai_data.get("detected_colors", []),
+                "materials": ai_data.get("materials", []),
+                "estimated_dimensions": ai_data.get("estimated_dimensions", ""),
+                "style": ai_data.get("style", ""),
+                "suggested_tags": ai_data.get("suggested_tags", [])
+            },
+            "bom": [],
+            "measurements": [],
+            "status": "draft",
+            "image_url": image_url,
+            "created_at": now,
+            "updated_at": now
+        }
+        
+        await db.assets.insert_one(asset_doc)
+        
+        # Return without _id
+        asset_response = {k: v for k, v in asset_doc.items() if k != "_id"}
+        
+        return {
+            "asset": asset_response,
+            "ai_analysis": ai_data,
+            "message": "Asset created successfully from image"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
+
 # ==================== DASHBOARD STATS ====================
 
 @api_router.get("/dashboard/stats")
