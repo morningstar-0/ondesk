@@ -36,6 +36,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Assets', href: '/assets', icon: Boxes },
   { name: 'Products', href: '/products', icon: ShoppingBag },
+  { name: 'Materials', href: '/materials', icon: Layers },
   { type: 'separator', label: 'Libraries' },
   { name: 'Colors', href: '/libraries/colors', icon: Palette },
   { name: 'Sizes', href: '/libraries/sizes', icon: Ruler },
