@@ -21,82 +21,100 @@ Create a tenant-based asset and product management software with:
 - **Frontend**: React with Shadcn/UI components
 - **Auth**: JWT-based with multi-tenant isolation
 - **Database**: Separate MongoDB database per tenant
-- **AI**: Emergent LLM integration (GPT-5.2) for attribute generation
+- **AI**: Emergent LLM integration (GPT-5.2) for attribute generation and image analysis
 
 ## Core Requirements (Implemented)
 - [x] Multi-tenant architecture with database-per-tenant isolation
 - [x] JWT authentication and authorization
 - [x] Assets management with CRUD operations
 - [x] Products management with CRUD operations
+- [x] Materials library with CRUD operations
 - [x] Convert Asset to Product workflow
 - [x] Libraries: Colors, Sizes, Custom Fields, Suppliers, Buyers
 - [x] Form Builder for custom layouts
 - [x] AI-powered description/SKU generation
+- [x] AI-powered image analysis for asset creation
 - [x] Dashboard with statistics
 - [x] Admin settings and user management
+- [x] Detail pages for Assets, Products, Materials
+- [x] Media upload functionality
 
 ## What's Been Implemented (Jan 31, 2026)
-- Complete backend API with 35+ endpoints
-- Full frontend with 12 pages
+- Complete backend API with 40+ endpoints
+- Full frontend with 15+ pages
 - Multi-tenant database isolation
-- JWT authentication flow
+- JWT authentication flow with proper token handling
 - All library CRUD operations
 - Asset to Product conversion
-- AI integration for attribute generation
+- AI integration for attribute generation and image analysis
 - Form builder for custom layouts
 - Dashboard with real-time stats
 - User and organization management
+- Detail pages with full-screen view support
+- Media upload panel
+
+## Bug Fixes Applied (Jan 31, 2026)
+1. **Backend Validation Errors**: Fixed Pydantic models to have default values for all fields, ensuring backward compatibility with older database records
+2. **Authentication Issues**: Fixed AuthContext to use axios interceptors for token handling, preventing race conditions
+3. **SelectItem Empty Value**: Fixed React SelectItem components to use placeholder value instead of empty string
+
+## API Endpoints
+### Authentication
+- `POST /api/auth/register` - Register new user and organization
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user info
+
+### Core Entities
+- `/api/assets` - CRUD for assets
+- `/api/products` - CRUD for products
+- `/api/materials` - CRUD for materials
+- `POST /api/assets/{id}/convert-to-product` - Convert asset to product
+
+### Libraries
+- `/api/colors`, `/api/sizes`, `/api/custom-fields`
+- `/api/suppliers`, `/api/buyers`
+- `/api/divisions`, `/api/product-types`, `/api/seasons`
+
+### Admin
+- `/api/form-layouts` - Manage form layouts
+- `/api/settings` - System settings
+- `/api/users` - User management
+- `/api/dashboard/stats` - Dashboard statistics
+
+### AI & Upload
+- `POST /api/ai/generate` - Generate AI content
+- `POST /api/upload/media` - Upload media files
+- `POST /api/upload/image-analyze` - Upload and AI-analyze image
+
+## Test Credentials
+- Email: testfix@example.com
+- Password: test123
 
 ## Prioritized Backlog
-### P0 (Critical)
-- All core features implemented ✅
 
-### P1 (Important)
-- [ ] BOM (Bill of Materials) subform in asset/product detail
+### P0 (Critical) - COMPLETED
+- All core features implemented and tested
+
+### P1 (Important) - UPCOMING
+- [ ] Full-screen detail pages with new tab option
+- [ ] Enhanced Media Upload Panel (drag-drop, copy-paste, multi-file)
+- [ ] Product sub-tabs (Colors, Sizes, SKU Codes, Barcodes)
+
+### P2 (Nice to Have)
+- [ ] BOM (Bill of Materials) subform
 - [ ] Measurement charts subform
 - [ ] Bulk import/export functionality
 - [ ] Advanced search and filtering
+- [ ] `.ai` file processing (artboard extraction)
 
-### P2 (Nice to Have)
-- [ ] Image upload for assets/products
-- [ ] Audit trail/activity log
+### P3 (Future)
 - [ ] Role-based permissions (beyond admin/user)
+- [ ] Audit trail/activity log
 - [ ] Custom reports and analytics
 - [ ] Email notifications
 
-## API Endpoints
-- `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
-- `/api/assets`, `/api/products`, `/api/assets/:id/convert-to-product`
-- `/api/colors`, `/api/sizes`, `/api/custom-fields`
-- `/api/suppliers`, `/api/buyers`
-- `/api/form-layouts`, `/api/settings`, `/api/users`
-- `/api/dashboard/stats`, `/api/ai/generate`
-
-## Test Credentials
-- Email: test@example.com
-- Password: test123
-
-## Update: Jan 31, 2026 - Image Upload with AI Analysis
-
-### New Feature Implemented
-- **Image Upload for Assets**: Users can now upload images (JPEG, PNG, WEBP) to create assets
-- **AI Vision Analysis**: GPT-5.2 vision model analyzes uploaded images and automatically extracts:
-  - Product/asset name
-  - Description
-  - Category
-  - Detected colors
-  - Materials
-  - Style
-  - Suggested tags
-- **Asset Creation**: New assets are created with AI-generated attributes and image thumbnail
-
-### API Endpoint
-- `POST /api/assets/upload-image` - Accepts multipart/form-data with 'file' field
-- Returns: Created asset with AI analysis results
-
-### Frontend Changes
-- Added "Upload Image" button on Assets page
-- Upload dialog with image preview
-- Progress indicator during upload/analysis
-- AI analysis results display
-- Image thumbnails in assets table
+## Tech Notes
+- Frontend babel plugin workaround: `REACT_APP_DISABLE_VISUAL_EDIT_PLUGIN=true` in `.env`
+- Backend uses motor (async MongoDB driver)
+- All response models use Pydantic with ConfigDict(extra="ignore")
+- AI features use Emergent LLM Key (Universal Key)
