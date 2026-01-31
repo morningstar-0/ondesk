@@ -702,7 +702,7 @@ class AssetProductAPITester:
         # Prepare multipart form data
         files = {'file': ('test_image.jpg', image_data, 'image/jpeg')}
         
-        url = f"{self.base_url}/assets/upload-image"
+        url = f"{self.base_url}/upload/image-analyze"
         headers = {'Authorization': f'Bearer {self.token}'}
         
         self.tests_run += 1
@@ -748,7 +748,7 @@ class AssetProductAPITester:
         text_data = b"This is not an image file"
         files = {'file': ('test.txt', text_data, 'text/plain')}
         
-        url = f"{self.base_url}/assets/upload-image"
+        url = f"{self.base_url}/upload/image-analyze"
         headers = {'Authorization': f'Bearer {self.token}'}
         
         self.tests_run += 1
@@ -780,7 +780,7 @@ class AssetProductAPITester:
         large_data = image_data * 1000  # Make it larger
         files = {'file': ('large_image.jpg', large_data, 'image/jpeg')}
         
-        url = f"{self.base_url}/assets/upload-image"
+        url = f"{self.base_url}/upload/image-analyze"
         headers = {'Authorization': f'Bearer {self.token}'}
         
         self.tests_run += 1
@@ -818,7 +818,7 @@ class AssetProductAPITester:
         image_data = self.create_test_image('PNG', (150, 150), 'yellow')
         files = {'file': ('test_image.png', image_data, 'image/png')}
         
-        url = f"{self.base_url}/assets/upload-image"
+        url = f"{self.base_url}/upload/image-analyze"
         headers = {'Authorization': f'Bearer {self.token}'}
         
         self.tests_run += 1
@@ -851,7 +851,7 @@ class AssetProductAPITester:
         image_data = self.create_test_image('JPEG', (100, 100), 'red')
         files = {'file': ('test_image.jpg', image_data, 'image/jpeg')}
         
-        url = f"{self.base_url}/assets/upload-image"
+        url = f"{self.base_url}/upload/image-analyze"
         # No authorization header
         
         self.tests_run += 1
