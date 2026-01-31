@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Plus, Trash2, Ruler, Settings2, ChevronDown, ChevronRight, AlertCircle, Search } from 'lucide-react';
+import { Plus, Trash2, Ruler, Check, X } from 'lucide-react';
 
 const MeasurementChartPanel = ({ 
   measurements = [], 
@@ -16,30 +14,43 @@ const MeasurementChartPanel = ({
   pomList = [],
   readOnly = false 
 }) => {
-  const [selectedPoms, setSelectedPoms] = useState([]);
+  const [selectedPoms, setSelectedPoms] = useState(() => {
+    // Initialize from existing measurements
+    const existingPoms = new Set();
+    measurements.forEach(m => {
+      Object.keys(m.measurements || {}).forEach(key => existingPoms.add(key));
+    });
+    return Array.from(existingPoms);
+  });
   const [activeCell, setActiveCell] = useState(null);
   const [showInches, setShowInches] = useState(false);
-  const [isAddPomDialogOpen, setIsAddPomDialogOpen] = useState(false);
   const [baseSize, setBaseSize] = useState('M');
+  const [addingPom, setAddingPom] = useState(false);
+  const [newPomId, setNewPomId] = useState('');
   const inputRefs = useRef({});
-
-  // Initialize selected POMs from existing measurements or pomList
-  useEffect(() => {
-    if (measurements.length > 0 && selectedPoms.length === 0) {
-      const existingPoms = new Set();
-      measurements.forEach(m => {
-        Object.keys(m.measurements || {}).forEach(key => existingPoms.add(key));
-      });
-      if (existingPoms.size > 0) {
-        setSelectedPoms(Array.from(existingPoms));
-      }
-    }
-  }, [measurements, selectedPoms.length]);
 
   // Get size objects sorted by sort_order
   const sortedSizes = [...sizes].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  // Get POM data including tolerances and grades
+  // Ensure measurements exist for all sizes
+  const ensureMeasurementsForSizes = () => {
+    const existingMeasurements = [...measurements];
+    sortedSizes.forEach(size => {
+      const exists = existingMeasurements.some(m => m.size_id === size.id || m.size_code === size.code);
+      if (!exists) {
+        existingMeasurements.push({
+          id: `meas-${size.id}-${Date.now()}`,
+          size_id: size.id,
+          size_name: size.name,
+          size_code: size.code,
+          measurements: {}
+        });
+      }
+    });
+    return existingMeasurements;
+  };
+
+  // Get POM data
   const getPomData = () => {
     return selectedPoms.map(pomCode => {
       const pom = pomList.find(p => p.code === pomCode);
@@ -63,29 +74,23 @@ const MeasurementChartPanel = ({
 
   const pomData = getPomData();
 
-  const addPom = (pomCode) => {
-    if (!selectedPoms.includes(pomCode)) {
-      setSelectedPoms([...selectedPoms, pomCode]);
-      // Initialize measurements for new POM
-      const updatedMeasurements = measurements.map(m => ({
-        ...m,
-        measurements: { ...m.measurements, [pomCode]: 0 }
-      }));
-      // If no measurements exist, create one for each size
-      if (measurements.length === 0 && sortedSizes.length > 0) {
-        const newMeasurements = sortedSizes.map(size => ({
-          id: `meas-${size.id}-${Date.now()}`,
-          size_id: size.id,
-          size_name: size.name,
-          size_code: size.code,
-          measurements: { [pomCode]: 0 }
+  const addPom = () => {
+    if (newPomId && !selectedPoms.includes(newPomId)) {
+      const pom = pomList.find(p => p.id === newPomId);
+      if (pom) {
+        setSelectedPoms([...selectedPoms, pom.code]);
+        
+        // Initialize measurements for new POM across all sizes
+        let updatedMeasurements = ensureMeasurementsForSizes();
+        updatedMeasurements = updatedMeasurements.map(m => ({
+          ...m,
+          measurements: { ...m.measurements, [pom.code]: 0 }
         }));
-        onChange(newMeasurements);
-      } else {
         onChange(updatedMeasurements);
       }
     }
-    setIsAddPomDialogOpen(false);
+    setAddingPom(false);
+    setNewPomId('');
   };
 
   const removePom = (pomCode) => {
@@ -101,33 +106,19 @@ const MeasurementChartPanel = ({
     const size = sortedSizes.find(s => s.code === sizeCode);
     if (!size) return;
 
-    let sizeExists = measurements.some(m => m.size_id === size.id || m.size_code === sizeCode);
-    
-    let updatedMeasurements;
-    if (sizeExists) {
-      updatedMeasurements = measurements.map(m => {
-        if (m.size_id === size.id || m.size_code === sizeCode) {
-          return {
-            ...m,
-            measurements: {
-              ...m.measurements,
-              [pomCode]: parseFloat(value) || 0
-            }
-          };
-        }
-        return m;
-      });
-    } else {
-      // Create new measurement for this size
-      const newMeasurement = {
-        id: `meas-${size.id}-${Date.now()}`,
-        size_id: size.id,
-        size_name: size.name,
-        size_code: size.code,
-        measurements: { [pomCode]: parseFloat(value) || 0 }
-      };
-      updatedMeasurements = [...measurements, newMeasurement];
-    }
+    let updatedMeasurements = ensureMeasurementsForSizes();
+    updatedMeasurements = updatedMeasurements.map(m => {
+      if (m.size_id === size.id || m.size_code === sizeCode) {
+        return {
+          ...m,
+          measurements: {
+            ...m.measurements,
+            [pomCode]: parseFloat(value) || 0
+          }
+        };
+      }
+      return m;
+    });
     onChange(updatedMeasurements);
   };
 
@@ -216,19 +207,12 @@ const MeasurementChartPanel = ({
               />
               <span className={showInches ? 'font-medium' : 'text-muted-foreground'}>Inches</span>
             </div>
-            
-            {!readOnly && (
-              <Button size="sm" onClick={() => setIsAddPomDialogOpen(true)} disabled={availablePoms.length === 0}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add POM
-              </Button>
-            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="p-0">
-        {selectedPoms.length === 0 ? (
+        {selectedPoms.length === 0 && !addingPom ? (
           <div className="p-12 text-center bg-slate-50/50">
             <Ruler className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-600 font-medium">No measurement points added</p>
@@ -237,19 +221,26 @@ const MeasurementChartPanel = ({
                 ? 'Add points to your POM library first'
                 : 'Click "Add POM" to add measurement points'}
             </p>
+            {pomList.length > 0 && !readOnly && (
+              <Button 
+                size="sm" 
+                className="mt-4"
+                onClick={() => setAddingPom(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add POM
+              </Button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-100 border-b border-slate-200">
-                  <th className="sticky left-0 z-10 bg-slate-100 w-10 px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
-                    !
-                  </th>
-                  <th className="sticky left-10 z-10 bg-slate-100 w-24 px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                  <th className="sticky left-0 z-10 bg-slate-100 w-24 px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
                     POM Code
                   </th>
-                  <th className="sticky left-[136px] z-10 bg-slate-100 min-w-[180px] px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                  <th className="sticky left-24 z-10 bg-slate-100 min-w-[160px] px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
                     POM Name
                   </th>
                   <th className="w-16 px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
@@ -284,13 +275,10 @@ const MeasurementChartPanel = ({
                       pomIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                     }`}
                   >
-                    <td className="sticky left-0 z-10 bg-inherit w-10 px-2 py-2 text-center border-r">
-                      <AlertCircle className="h-4 w-4 text-amber-500 mx-auto" />
-                    </td>
-                    <td className="sticky left-10 z-10 bg-inherit w-24 px-3 py-2 border-r">
+                    <td className="sticky left-0 z-10 bg-inherit w-24 px-3 py-2 border-r">
                       <span className="font-mono text-sm text-slate-700">{pom.code}</span>
                     </td>
-                    <td className="sticky left-[136px] z-10 bg-inherit min-w-[180px] px-3 py-2 border-r">
+                    <td className="sticky left-24 z-10 bg-inherit min-w-[160px] px-3 py-2 border-r">
                       <span className="font-medium text-sm text-slate-800">{pom.name}</span>
                     </td>
                     <td className="w-16 px-2 py-2 text-center border-r">
@@ -350,8 +338,53 @@ const MeasurementChartPanel = ({
                     )}
                   </tr>
                 ))}
+                
+                {/* Add POM Row */}
+                {addingPom && (
+                  <tr className="bg-yellow-50 border-b">
+                    <td colSpan={5 + sortedSizes.length + 1} className="px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <Select value={newPomId} onValueChange={setNewPomId}>
+                          <SelectTrigger className="w-[300px] h-9">
+                            <SelectValue placeholder="Select a POM to add..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availablePoms.map(pom => (
+                              <SelectItem key={pom.id} value={pom.id}>
+                                <span className="font-mono text-xs mr-2">{pom.code}</span>
+                                {pom.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={addPom} disabled={!newPomId}>
+                          <Check className="mr-2 h-4 w-4" />
+                          Add
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setAddingPom(false); setNewPomId(''); }}>
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
+            
+            {/* Add POM Button */}
+            {!addingPom && !readOnly && availablePoms.length > 0 && (
+              <div className="px-4 py-3 border-t bg-white">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setAddingPom(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add POM
+                </Button>
+              </div>
+            )}
           </div>
         )}
         
@@ -363,45 +396,6 @@ const MeasurementChartPanel = ({
           </div>
         )}
       </CardContent>
-
-      {/* Add POM Dialog */}
-      <Dialog open={isAddPomDialogOpen} onOpenChange={setIsAddPomDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Measurement Point</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input placeholder="Search POMs..." className="pl-9" />
-            </div>
-            <div className="max-h-[300px] overflow-y-auto space-y-1">
-              {availablePoms.length === 0 ? (
-                <p className="text-sm text-slate-500 text-center py-4">No more POMs available</p>
-              ) : (
-                availablePoms.map(pom => (
-                  <button
-                    key={pom.id}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-100 transition-colors text-left"
-                    onClick={() => addPom(pom.code)}
-                  >
-                    <div>
-                      <span className="font-mono text-sm text-slate-600 mr-2">{pom.code}</span>
-                      <span className="font-medium">{pom.name}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{pom.category}</Badge>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPomDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 };
