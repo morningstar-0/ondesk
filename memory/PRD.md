@@ -52,6 +52,9 @@ Create a tenant-based asset and product management software with:
 - User and organization management
 - Detail pages with full-screen view support
 - Media upload panel
+- **Full-screen detail pages with "Open in New Tab" option**
+- **Slide-out sidebar navigation on detail pages**
+- **Ctrl/Cmd+Click support to open items in new tabs**
 
 ## Bug Fixes Applied (Jan 31, 2026)
 1. **Backend Validation Errors**: Fixed Pydantic models to have default values for all fields, ensuring backward compatibility with older database records
