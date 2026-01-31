@@ -55,6 +55,8 @@ Create a tenant-based asset and product management software with:
 - **Full-screen detail pages with "Open in New Tab" option**
 - **Slide-out sidebar navigation on detail pages**
 - **Ctrl/Cmd+Click support to open items in new tabs**
+- **BOM (Bill of Materials) subform** - Sources materials from Materials library, calculates costs
+- **Measurement Chart subform** - Configurable measurement points with Size library integration
 
 ## Bug Fixes Applied (Jan 31, 2026)
 1. **Backend Validation Errors**: Fixed Pydantic models to have default values for all fields, ensuring backward compatibility with older database records
