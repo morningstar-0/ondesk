@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { Plus, Trash2, Ruler, Settings2 } from 'lucide-react';
+import { Switch } from './ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Plus, Trash2, Ruler, Settings2, ChevronDown, ChevronRight, AlertCircle, Search } from 'lucide-react';
 
 const MeasurementChartPanel = ({ 
   measurements = [], 
@@ -16,9 +18,12 @@ const MeasurementChartPanel = ({
 }) => {
   const [selectedPoms, setSelectedPoms] = useState([]);
   const [activeCell, setActiveCell] = useState(null);
+  const [showInches, setShowInches] = useState(false);
+  const [isAddPomDialogOpen, setIsAddPomDialogOpen] = useState(false);
+  const [baseSize, setBaseSize] = useState('M');
   const inputRefs = useRef({});
 
-  // Initialize selected POMs from existing measurements
+  // Initialize selected POMs from existing measurements or pomList
   useEffect(() => {
     if (measurements.length > 0 && selectedPoms.length === 0) {
       const existingPoms = new Set();
@@ -26,422 +31,377 @@ const MeasurementChartPanel = ({
         Object.keys(m.measurements || {}).forEach(key => existingPoms.add(key));
       });
       if (existingPoms.size > 0) {
-        const matchingPoms = pomList.filter(p => existingPoms.has(p.code) || existingPoms.has(p.name));
-        if (matchingPoms.length > 0) {
-          setSelectedPoms(matchingPoms.map(p => p.id));
-        }
+        setSelectedPoms(Array.from(existingPoms));
       }
     }
-  }, [measurements, pomList, selectedPoms.length]);
+  }, [measurements, selectedPoms.length]);
 
-  // Get used size IDs
-  const usedSizeIds = new Set(measurements.map(m => m.size_id));
-  const availableSizes = sizes.filter(s => !usedSizeIds.has(s.id));
+  // Get size objects sorted by sort_order
+  const sortedSizes = [...sizes].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  // Get selected POM objects
-  const selectedPomObjects = pomList.filter(p => selectedPoms.includes(p.id));
+  // Get POM data including tolerances and grades
+  const getPomData = () => {
+    return selectedPoms.map(pomCode => {
+      const pom = pomList.find(p => p.code === pomCode);
+      const measurementData = {};
+      sortedSizes.forEach(size => {
+        const sizeData = measurements.find(m => m.size_id === size.id || m.size_code === size.code);
+        measurementData[size.code] = sizeData?.measurements?.[pomCode] || 0;
+      });
+      return {
+        code: pomCode,
+        name: pom?.name || pomCode,
+        description: pom?.description || '',
+        unit: pom?.unit || 'cm',
+        negativeTolerance: 0.25,
+        positiveTolerance: 0.25,
+        grade: 0.5,
+        measurements: measurementData
+      };
+    });
+  };
 
-  const addPom = (pomId) => {
-    if (!selectedPoms.includes(pomId)) {
-      const pom = pomList.find(p => p.id === pomId);
-      if (pom) {
-        setSelectedPoms([...selectedPoms, pomId]);
-        // Add this POM to all existing measurements
-        const updatedMeasurements = measurements.map(m => ({
-          ...m,
-          measurements: { ...m.measurements, [pom.code]: 0 }
+  const pomData = getPomData();
+
+  const addPom = (pomCode) => {
+    if (!selectedPoms.includes(pomCode)) {
+      setSelectedPoms([...selectedPoms, pomCode]);
+      // Initialize measurements for new POM
+      const updatedMeasurements = measurements.map(m => ({
+        ...m,
+        measurements: { ...m.measurements, [pomCode]: 0 }
+      }));
+      // If no measurements exist, create one for each size
+      if (measurements.length === 0 && sortedSizes.length > 0) {
+        const newMeasurements = sortedSizes.map(size => ({
+          id: `meas-${size.id}-${Date.now()}`,
+          size_id: size.id,
+          size_name: size.name,
+          size_code: size.code,
+          measurements: { [pomCode]: 0 }
         }));
+        onChange(newMeasurements);
+      } else {
         onChange(updatedMeasurements);
       }
     }
+    setIsAddPomDialogOpen(false);
   };
 
-  const removePom = (pomId) => {
-    const pom = pomList.find(p => p.id === pomId);
-    if (pom) {
-      setSelectedPoms(selectedPoms.filter(id => id !== pomId));
-      // Remove this POM from all measurements
-      const updatedMeasurements = measurements.map(m => {
-        const { [pom.code]: removed, ...rest } = m.measurements || {};
-        return { ...m, measurements: rest };
-      });
-      onChange(updatedMeasurements);
-    }
-  };
-
-  const addSizeRow = (sizeId) => {
-    const size = sizes.find(s => s.id === sizeId);
-    if (!size) return;
-
-    const initialMeasurements = {};
-    selectedPomObjects.forEach(pom => {
-      initialMeasurements[pom.code] = 0;
-    });
-
-    const newMeasurement = {
-      id: `meas-${Date.now()}`,
-      size_id: size.id,
-      size_name: size.name,
-      size_code: size.code,
-      measurements: initialMeasurements
-    };
-
-    onChange([...measurements, newMeasurement]);
-  };
-
-  const removeSizeRow = (measurementId) => {
-    onChange(measurements.filter(m => m.id !== measurementId));
-  };
-
-  const updateMeasurement = (measurementId, pomCode, value) => {
+  const removePom = (pomCode) => {
+    setSelectedPoms(selectedPoms.filter(c => c !== pomCode));
     const updatedMeasurements = measurements.map(m => {
-      if (m.id === measurementId) {
-        return {
-          ...m,
-          measurements: {
-            ...m.measurements,
-            [pomCode]: parseFloat(value) || 0
-          }
-        };
-      }
-      return m;
+      const { [pomCode]: removed, ...rest } = m.measurements || {};
+      return { ...m, measurements: rest };
     });
     onChange(updatedMeasurements);
   };
 
-  // Keyboard navigation for AG Grid-like experience
-  const handleKeyDown = (e, rowIndex, colIndex, measurementId, pomCode) => {
-    const totalRows = measurements.length;
-    const totalCols = selectedPomObjects.length;
+  const updateMeasurement = (pomCode, sizeCode, value) => {
+    const size = sortedSizes.find(s => s.code === sizeCode);
+    if (!size) return;
 
-    let newRow = rowIndex;
-    let newCol = colIndex;
+    let sizeExists = measurements.some(m => m.size_id === size.id || m.size_code === sizeCode);
+    
+    let updatedMeasurements;
+    if (sizeExists) {
+      updatedMeasurements = measurements.map(m => {
+        if (m.size_id === size.id || m.size_code === sizeCode) {
+          return {
+            ...m,
+            measurements: {
+              ...m.measurements,
+              [pomCode]: parseFloat(value) || 0
+            }
+          };
+        }
+        return m;
+      });
+    } else {
+      // Create new measurement for this size
+      const newMeasurement = {
+        id: `meas-${size.id}-${Date.now()}`,
+        size_id: size.id,
+        size_name: size.name,
+        size_code: size.code,
+        measurements: { [pomCode]: parseFloat(value) || 0 }
+      };
+      updatedMeasurements = [...measurements, newMeasurement];
+    }
+    onChange(updatedMeasurements);
+  };
+
+  const convertToInches = (cm) => {
+    return (cm / 2.54).toFixed(2);
+  };
+
+  const handleKeyDown = (e, pomIndex, sizeIndex) => {
+    const totalPoms = pomData.length;
+    const totalSizes = sortedSizes.length;
+    let newPomIndex = pomIndex;
+    let newSizeIndex = sizeIndex;
 
     switch (e.key) {
       case 'ArrowUp':
         e.preventDefault();
-        newRow = Math.max(0, rowIndex - 1);
+        newPomIndex = Math.max(0, pomIndex - 1);
         break;
       case 'ArrowDown':
         e.preventDefault();
-        newRow = Math.min(totalRows - 1, rowIndex + 1);
+        newPomIndex = Math.min(totalPoms - 1, pomIndex + 1);
         break;
       case 'ArrowLeft':
-        if (e.target.selectionStart === 0) {
-          e.preventDefault();
-          newCol = Math.max(0, colIndex - 1);
-        }
-        return;
+        e.preventDefault();
+        newSizeIndex = Math.max(0, sizeIndex - 1);
+        break;
       case 'ArrowRight':
-        if (e.target.selectionStart === e.target.value.length) {
-          e.preventDefault();
-          newCol = Math.min(totalCols - 1, colIndex + 1);
-        }
-        return;
+        e.preventDefault();
+        newSizeIndex = Math.min(totalSizes - 1, sizeIndex + 1);
+        break;
       case 'Tab':
         e.preventDefault();
         if (e.shiftKey) {
-          if (colIndex > 0) {
-            newCol = colIndex - 1;
-          } else if (rowIndex > 0) {
-            newRow = rowIndex - 1;
-            newCol = totalCols - 1;
+          if (sizeIndex > 0) newSizeIndex = sizeIndex - 1;
+          else if (pomIndex > 0) {
+            newPomIndex = pomIndex - 1;
+            newSizeIndex = totalSizes - 1;
           }
         } else {
-          if (colIndex < totalCols - 1) {
-            newCol = colIndex + 1;
-          } else if (rowIndex < totalRows - 1) {
-            newRow = rowIndex + 1;
-            newCol = 0;
+          if (sizeIndex < totalSizes - 1) newSizeIndex = sizeIndex + 1;
+          else if (pomIndex < totalPoms - 1) {
+            newPomIndex = pomIndex + 1;
+            newSizeIndex = 0;
           }
         }
         break;
       case 'Enter':
         e.preventDefault();
-        newRow = Math.min(totalRows - 1, rowIndex + 1);
+        if (pomIndex < totalPoms - 1) newPomIndex = pomIndex + 1;
         break;
       default:
         return;
     }
 
-    const newMeasurement = measurements[newRow];
-    const newPom = selectedPomObjects[newCol];
-    if (newMeasurement && newPom) {
-      const key = `${newMeasurement.id}-${newPom.code}`;
-      if (inputRefs.current[key]) {
-        inputRefs.current[key].focus();
-        inputRefs.current[key].select();
-      }
+    const key = `${pomData[newPomIndex]?.code}-${sortedSizes[newSizeIndex]?.code}`;
+    if (inputRefs.current[key]) {
+      inputRefs.current[key].focus();
+      inputRefs.current[key].select();
     }
   };
 
-  const availablePoms = pomList.filter(p => !selectedPoms.includes(p.id));
+  const availablePoms = pomList.filter(p => !selectedPoms.includes(p.code));
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3 bg-muted/30">
+    <Card className="overflow-hidden border-0 shadow-sm">
+      {/* Header */}
+      <CardHeader className="pb-3 bg-slate-50 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Ruler className="h-5 w-5" />
-            Measurement Chart
-          </CardTitle>
-          <div className="flex gap-2">
-            {!readOnly && availablePoms.length > 0 && (
-              <Select onValueChange={addPom}>
-                <SelectTrigger className="w-[160px] h-9">
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Add POM" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePoms.map((pom) => (
-                    <SelectItem key={pom.id} value={pom.id}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{pom.code}</span>
-                        <span>{pom.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {!readOnly && availableSizes.length > 0 && (
-              <Select onValueChange={addSizeRow}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <Plus className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Add Size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSizes.map((size) => (
-                    <SelectItem key={size.id} value={size.id}>
-                      {size.name} ({size.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Ruler className="h-5 w-5 text-slate-600" />
+              Measurement Chart
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">
+              {showInches ? 'Inches' : 'CM'}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Unit Toggle */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className={!showInches ? 'font-medium' : 'text-muted-foreground'}>CM</span>
+              <Switch
+                checked={showInches}
+                onCheckedChange={setShowInches}
+                className="data-[state=checked]:bg-blue-600"
+              />
+              <span className={showInches ? 'font-medium' : 'text-muted-foreground'}>Inches</span>
+            </div>
+            
+            {!readOnly && (
+              <Button size="sm" onClick={() => setIsAddPomDialogOpen(true)} disabled={availablePoms.length === 0}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add POM
+              </Button>
             )}
           </div>
         </div>
-        {/* Selected POMs */}
-        {selectedPomObjects.length > 0 && !readOnly && (
-          <div className="flex flex-wrap gap-1 mt-3">
-            {selectedPomObjects.map(pom => (
-              <Badge 
-                key={pom.id} 
-                variant="secondary" 
-                className="gap-1 pr-1 cursor-pointer hover:bg-destructive/20"
-                onClick={() => removePom(pom.id)}
-              >
-                {pom.code}
-                <span className="text-destructive ml-1">×</span>
-              </Badge>
-            ))}
-          </div>
-        )}
       </CardHeader>
+
       <CardContent className="p-0">
-        {selectedPomObjects.length === 0 ? (
-          <div className="p-8 text-center">
-            <Ruler className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">No measurement points selected</p>
-            {pomList.length === 0 ? (
-              <p className="text-xs text-muted-foreground mt-1">
-                Add points to your POM library first
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                Select measurement points from the dropdown above
-              </p>
-            )}
+        {selectedPoms.length === 0 ? (
+          <div className="p-12 text-center bg-slate-50/50">
+            <Ruler className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-600 font-medium">No measurement points added</p>
+            <p className="text-sm text-slate-400 mt-1">
+              {pomList.length === 0 
+                ? 'Add points to your POM library first'
+                : 'Click "Add POM" to add measurement points'}
+            </p>
           </div>
         ) : (
-          <div className="ag-grid-wrapper">
-            {/* AG Grid-like header */}
-            <div className="ag-header">
-              <div className="ag-header-row">
-                <div className="ag-header-cell ag-header-cell-size">Size</div>
-                {selectedPomObjects.map((pom) => (
-                  <div key={pom.id} className="ag-header-cell" title={pom.name}>
-                    <span className="font-mono">{pom.code}</span>
-                    <span className="text-[10px] text-muted-foreground ml-1">({pom.unit})</span>
-                  </div>
-                ))}
-                {!readOnly && <div className="ag-header-cell ag-header-cell-actions" />}
-              </div>
-            </div>
-            
-            {/* AG Grid-like body */}
-            <div className="ag-body">
-              {measurements.length === 0 ? (
-                <div className="ag-row ag-row-empty">
-                  <div className="p-8 text-center w-full">
-                    <p className="text-muted-foreground">No sizes added</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Select a size from the dropdown above
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                measurements.map((measurement, rowIndex) => (
-                  <div 
-                    key={measurement.id} 
-                    className={`ag-row ${rowIndex % 2 === 0 ? 'ag-row-even' : 'ag-row-odd'}`}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-slate-100 border-b border-slate-200">
+                  <th className="sticky left-0 z-10 bg-slate-100 w-10 px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    !
+                  </th>
+                  <th className="sticky left-10 z-10 bg-slate-100 w-24 px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    POM Code
+                  </th>
+                  <th className="sticky left-[136px] z-10 bg-slate-100 min-w-[180px] px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    POM Name
+                  </th>
+                  <th className="w-16 px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    -Tol.
+                  </th>
+                  <th className="w-16 px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    +Tol.
+                  </th>
+                  <th className="w-16 px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-r">
+                    Grade
+                  </th>
+                  {sortedSizes.map(size => (
+                    <th 
+                      key={size.id}
+                      className={`w-20 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider border-r ${
+                        size.code === baseSize 
+                          ? 'bg-teal-500 text-white' 
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {size.code}
+                    </th>
+                  ))}
+                  {!readOnly && <th className="w-10 px-2 py-3" />}
+                </tr>
+              </thead>
+              <tbody>
+                {pomData.map((pom, pomIndex) => (
+                  <tr 
+                    key={pom.code} 
+                    className={`border-b border-slate-100 hover:bg-slate-50 ${
+                      pomIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                    }`}
                   >
-                    <div className="ag-cell ag-cell-size">
-                      <Badge variant="outline" className="font-mono">
-                        {measurement.size_code || measurement.size_name}
-                      </Badge>
-                    </div>
-                    {selectedPomObjects.map((pom, colIndex) => (
-                      <div 
-                        key={pom.id} 
-                        className={`ag-cell ${activeCell === `${measurement.id}-${pom.code}` ? 'ag-cell-active' : ''}`}
-                      >
-                        {readOnly ? (
-                          <span className="font-mono text-sm">
-                            {measurement.measurements?.[pom.code] || '-'}
-                          </span>
-                        ) : (
-                          <Input
-                            ref={(el) => { inputRefs.current[`${measurement.id}-${pom.code}`] = el; }}
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            className="ag-cell-input"
-                            value={measurement.measurements?.[pom.code] || ''}
-                            onChange={(e) => updateMeasurement(measurement.id, pom.code, e.target.value)}
-                            onFocus={() => setActiveCell(`${measurement.id}-${pom.code}`)}
-                            onBlur={() => setActiveCell(null)}
-                            onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex, measurement.id, pom.code)}
-                            placeholder="0"
-                          />
-                        )}
-                      </div>
-                    ))}
+                    <td className="sticky left-0 z-10 bg-inherit w-10 px-2 py-2 text-center border-r">
+                      <AlertCircle className="h-4 w-4 text-amber-500 mx-auto" />
+                    </td>
+                    <td className="sticky left-10 z-10 bg-inherit w-24 px-3 py-2 border-r">
+                      <span className="font-mono text-sm text-slate-700">{pom.code}</span>
+                    </td>
+                    <td className="sticky left-[136px] z-10 bg-inherit min-w-[180px] px-3 py-2 border-r">
+                      <span className="font-medium text-sm text-slate-800">{pom.name}</span>
+                    </td>
+                    <td className="w-16 px-2 py-2 text-center border-r">
+                      <span className="text-sm text-slate-600">{pom.negativeTolerance}</span>
+                    </td>
+                    <td className="w-16 px-2 py-2 text-center border-r">
+                      <span className="text-sm text-slate-600">{pom.positiveTolerance}</span>
+                    </td>
+                    <td className="w-16 px-2 py-2 text-center border-r">
+                      <span className="text-sm text-slate-600">{pom.grade}</span>
+                    </td>
+                    {sortedSizes.map((size, sizeIndex) => {
+                      const value = pom.measurements[size.code] || 0;
+                      const displayValue = showInches ? convertToInches(value) : value;
+                      const isBaseSize = size.code === baseSize;
+                      
+                      return (
+                        <td 
+                          key={size.id}
+                          className={`w-20 px-1 py-1 text-center border-r ${
+                            isBaseSize ? 'bg-teal-50' : ''
+                          } ${activeCell === `${pom.code}-${size.code}` ? 'ring-2 ring-inset ring-blue-500' : ''}`}
+                        >
+                          {readOnly ? (
+                            <span className="font-mono text-sm">{displayValue || '-'}</span>
+                          ) : (
+                            <Input
+                              ref={(el) => { inputRefs.current[`${pom.code}-${size.code}`] = el; }}
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              className={`h-8 w-full text-center font-mono text-sm border-0 bg-transparent focus:bg-white focus:ring-1 focus:ring-blue-400 ${
+                                isBaseSize ? 'font-semibold' : ''
+                              }`}
+                              value={value || ''}
+                              onChange={(e) => updateMeasurement(pom.code, size.code, e.target.value)}
+                              onFocus={() => setActiveCell(`${pom.code}-${size.code}`)}
+                              onBlur={() => setActiveCell(null)}
+                              onKeyDown={(e) => handleKeyDown(e, pomIndex, sizeIndex)}
+                              placeholder="0"
+                            />
+                          )}
+                        </td>
+                      );
+                    })}
                     {!readOnly && (
-                      <div className="ag-cell ag-cell-actions">
+                      <td className="w-10 px-1 py-1 text-center">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
-                          onClick={() => removeSizeRow(measurement.id)}
+                          className="h-7 w-7 text-slate-400 hover:text-red-500"
+                          onClick={() => removePom(pom.code)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
+                      </td>
                     )}
-                  </div>
-                ))
-              )}
-            </div>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
         
-        {/* Unit hint */}
-        {measurements.length > 0 && selectedPomObjects.length > 0 && (
-          <div className="px-4 py-2 border-t bg-muted/30 text-xs text-muted-foreground flex items-center justify-between">
-            <span>Use arrow keys or Tab to navigate between cells</span>
-            <span>All values in measurement unit specified per POM</span>
+        {/* Footer */}
+        {pomData.length > 0 && (
+          <div className="px-4 py-2 bg-slate-50 border-t text-xs text-slate-500 flex items-center justify-between">
+            <span>Use arrow keys or Tab to navigate • Base size: <strong>{baseSize}</strong></span>
+            <span>{pomData.length} measurement point{pomData.length !== 1 ? 's' : ''} × {sortedSizes.length} size{sortedSizes.length !== 1 ? 's' : ''}</span>
           </div>
         )}
       </CardContent>
 
-      <style jsx>{`
-        .ag-grid-wrapper {
-          font-size: 13px;
-        }
-        .ag-header {
-          background: hsl(var(--muted));
-          border-bottom: 1px solid hsl(var(--border));
-          font-weight: 600;
-        }
-        .ag-header-row {
-          display: flex;
-          height: 40px;
-        }
-        .ag-header-cell {
-          display: flex;
-          align-items: center;
-          padding: 0 12px;
-          min-width: 80px;
-          flex: 1;
-          border-right: 1px solid hsl(var(--border));
-        }
-        .ag-header-cell-size {
-          min-width: 100px;
-          max-width: 100px;
-          flex: none;
-          background: hsl(var(--muted));
-          position: sticky;
-          left: 0;
-          z-index: 1;
-        }
-        .ag-header-cell-actions {
-          min-width: 50px;
-          max-width: 50px;
-          flex: none;
-        }
-        .ag-body {
-          overflow-x: auto;
-        }
-        .ag-row {
-          display: flex;
-          min-height: 40px;
-          border-bottom: 1px solid hsl(var(--border));
-        }
-        .ag-row-even {
-          background: hsl(var(--background));
-        }
-        .ag-row-odd {
-          background: hsl(var(--muted) / 0.3);
-        }
-        .ag-row:hover {
-          background: hsl(var(--accent));
-        }
-        .ag-row-empty {
-          justify-content: center;
-        }
-        .ag-cell {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px 8px;
-          min-width: 80px;
-          flex: 1;
-          border-right: 1px solid hsl(var(--border) / 0.5);
-        }
-        .ag-cell-size {
-          min-width: 100px;
-          max-width: 100px;
-          flex: none;
-          justify-content: flex-start;
-          padding-left: 12px;
-          background: inherit;
-          position: sticky;
-          left: 0;
-          z-index: 1;
-        }
-        .ag-cell-actions {
-          min-width: 50px;
-          max-width: 50px;
-          flex: none;
-        }
-        .ag-cell-active {
-          box-shadow: inset 0 0 0 2px hsl(var(--primary));
-        }
-        .ag-cell-input {
-          height: 32px;
-          width: 100%;
-          text-align: center;
-          font-family: monospace;
-          border: none;
-          background: transparent;
-          padding: 0 4px;
-        }
-        .ag-cell-input:focus {
-          outline: none;
-          background: hsl(var(--background));
-        }
-      `}</style>
+      {/* Add POM Dialog */}
+      <Dialog open={isAddPomDialogOpen} onOpenChange={setIsAddPomDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Measurement Point</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input placeholder="Search POMs..." className="pl-9" />
+            </div>
+            <div className="max-h-[300px] overflow-y-auto space-y-1">
+              {availablePoms.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">No more POMs available</p>
+              ) : (
+                availablePoms.map(pom => (
+                  <button
+                    key={pom.id}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-100 transition-colors text-left"
+                    onClick={() => addPom(pom.code)}
+                  >
+                    <div>
+                      <span className="font-mono text-sm text-slate-600 mr-2">{pom.code}</span>
+                      <span className="font-medium">{pom.name}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">{pom.category}</Badge>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddPomDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
