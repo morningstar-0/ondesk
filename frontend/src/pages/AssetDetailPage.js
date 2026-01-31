@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
-import { ArrowLeft, Save, Trash2, ArrowRightLeft, Upload, Image, ExternalLink, Plus, X } from 'lucide-react';
+import FullScreenHeader from '../components/FullScreenHeader';
+import { Save, Trash2, ArrowRightLeft, Upload, Image, Plus, X } from 'lucide-react';
 
 const AssetDetailPage = () => {
   const { id } = useParams();
