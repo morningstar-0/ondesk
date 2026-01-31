@@ -255,24 +255,24 @@ class AssetCreate(BaseModel):
 class AssetResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    code: str
-    name: str
-    description: str
-    division_id: str
-    product_type_id: str
-    product_subtype_id: str
-    tags: List[str]
-    color_ids: List[str]
-    size_ids: List[str]
-    supplier_id: str
-    custom_fields: Dict[str, Any]
-    bom: List[Dict]
-    measurements: List[Dict]
-    status: str
-    primary_image_url: str
-    media: List[Dict]
-    created_at: str
-    updated_at: str
+    code: str = ""
+    name: str = ""
+    description: str = ""
+    division_id: str = ""
+    product_type_id: str = ""
+    product_subtype_id: str = ""
+    tags: List[str] = []
+    color_ids: List[str] = []
+    size_ids: List[str] = []
+    supplier_id: str = ""
+    custom_fields: Dict[str, Any] = {}
+    bom: List[Dict] = []
+    measurements: List[Dict] = []
+    status: str = "draft"
+    primary_image_url: str = ""
+    media: List[Dict] = []
+    created_at: str = ""
+    updated_at: str = ""
 
 # Updated Product Model
 class ProductCreate(BaseModel):
@@ -303,31 +303,31 @@ class ProductCreate(BaseModel):
 class ProductResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    code: str
-    name: str
-    description: str
-    division_id: str
-    product_type_id: str
-    product_subtype_id: str
-    material_description: str
-    buyer_ids: List[str]
-    supplier_id: str
-    season_id: str
-    lifecycle_stage: str
-    notes: str
-    tags: List[str]
-    color_ids: List[str]
-    size_ids: List[str]
-    sku_variants: List[Dict]
-    custom_fields: Dict[str, Any]
-    bom: List[Dict]
-    measurements: List[Dict]
-    status: str
-    primary_image_url: str
-    media: List[Dict]
-    source_asset_id: str
-    created_at: str
-    updated_at: str
+    code: str = ""
+    name: str = ""
+    description: str = ""
+    division_id: str = ""
+    product_type_id: str = ""
+    product_subtype_id: str = ""
+    material_description: str = ""
+    buyer_ids: List[str] = []
+    supplier_id: str = ""
+    season_id: str = ""
+    lifecycle_stage: str = "concept"
+    notes: str = ""
+    tags: List[str] = []
+    color_ids: List[str] = []
+    size_ids: List[str] = []
+    sku_variants: List[Dict] = []
+    custom_fields: Dict[str, Any] = {}
+    bom: List[Dict] = []
+    measurements: List[Dict] = []
+    status: str = "draft"
+    primary_image_url: str = ""
+    media: List[Dict] = []
+    source_asset_id: str = ""
+    created_at: str = ""
+    updated_at: str = ""
 
 # Material Model (similar to Product)
 class MaterialCreate(BaseModel):
@@ -353,26 +353,26 @@ class MaterialCreate(BaseModel):
 class MaterialResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    code: str
-    name: str
-    description: str
-    division_id: str
-    material_type: str
-    composition: str
-    weight: str
-    width: str
-    supplier_id: str
-    unit_price: float
-    unit: str
-    color_ids: List[str]
-    tags: List[str]
-    certifications: List[str]
-    custom_fields: Dict[str, Any]
-    status: str
-    primary_image_url: str
-    media: List[Dict]
-    created_at: str
-    updated_at: str
+    code: str = ""
+    name: str = ""
+    description: str = ""
+    division_id: str = ""
+    material_type: str = ""
+    composition: str = ""
+    weight: str = ""
+    width: str = ""
+    supplier_id: str = ""
+    unit_price: float = 0
+    unit: str = "meter"
+    color_ids: List[str] = []
+    tags: List[str] = []
+    certifications: List[str] = []
+    custom_fields: Dict[str, Any] = {}
+    status: str = "active"
+    primary_image_url: str = ""
+    media: List[Dict] = []
+    created_at: str = ""
+    updated_at: str = ""
 
 class FormLayoutCreate(BaseModel):
     name: str

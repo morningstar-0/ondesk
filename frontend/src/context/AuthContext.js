@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -19,14 +19,26 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const api = axios.create({
-    baseURL: `${API_URL}/api`,
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  });
+  // Create api instance that updates when token changes
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: `${API_URL}/api`,
+    });
+    
+    // Add request interceptor to always use latest token
+    instance.interceptors.request.use((config) => {
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        config.headers.Authorization = `Bearer ${currentToken}`;
+      }
+      return config;
+    });
+    
+    return instance;
+  }, []);
 
   useEffect(() => {
     if (token) {
-      api.defaults.headers.Authorization = `Bearer ${token}`;
       fetchUser();
     } else {
       setLoading(false);
