@@ -143,8 +143,8 @@ const AssetsPage = () => {
                 filteredAssets.map(asset => (
                   <TableRow 
                     key={asset.id} 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/assets/${asset.id}`)}
+                    className="cursor-pointer hover:bg-muted/50 group"
+                    onClick={(e) => handleRowClick(e, asset.id)}
                     data-testid={`asset-row-${asset.id}`}
                   >
                     <TableCell>
@@ -157,7 +157,22 @@ const AssetsPage = () => {
                       )}
                     </TableCell>
                     <TableCell className="font-mono">{asset.code}</TableCell>
-                    <TableCell className="font-medium">{asset.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{asset.name}</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Click to open</p>
+                              <p className="text-xs text-muted-foreground">Ctrl/Cmd + Click for new tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
                     <TableCell>{asset.division_id || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={asset.status === 'active' ? 'default' : 'secondary'}>
@@ -174,6 +189,9 @@ const AssetsPage = () => {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/assets/${asset.id}`); }}>
                             <Pencil className="mr-2 h-4 w-4" />Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(`/assets/${asset.id}`, '_blank'); }}>
+                            <ExternalLink className="mr-2 h-4 w-4" />Open in New Tab
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={(e) => handleConvertToProduct(asset, e)}>
                             <ArrowRightLeft className="mr-2 h-4 w-4" />Convert to Product
