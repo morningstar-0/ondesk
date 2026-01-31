@@ -1,53 +1,186 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "./components/ui/sonner";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import AssetsPage from "./pages/AssetsPage";
+import ProductsPage from "./pages/ProductsPage";
+import ColorsLibraryPage from "./pages/ColorsLibraryPage";
+import SizesLibraryPage from "./pages/SizesLibraryPage";
+import CustomFieldsLibraryPage from "./pages/CustomFieldsLibraryPage";
+import SuppliersLibraryPage from "./pages/SuppliersLibraryPage";
+import BuyersLibraryPage from "./pages/BuyersLibraryPage";
+import FormBuilderPage from "./pages/FormBuilderPage";
+import SettingsPage from "./pages/SettingsPage";
+import UsersPage from "./pages/UsersPage";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// Layout
+import DashboardLayout from "./components/DashboardLayout";
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
 
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-32 bg-muted rounded" />
+          <div className="h-4 w-48 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <DashboardLayout>{children}</DashboardLayout>;
 };
+
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-32 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+
+      {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assets"
+        element={
+          <ProtectedRoute>
+            <AssetsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <ProductsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/libraries/colors"
+        element={
+          <ProtectedRoute>
+            <ColorsLibraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/libraries/sizes"
+        element={
+          <ProtectedRoute>
+            <SizesLibraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/libraries/custom-fields"
+        element={
+          <ProtectedRoute>
+            <CustomFieldsLibraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/libraries/suppliers"
+        element={
+          <ProtectedRoute>
+            <SuppliersLibraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/libraries/buyers"
+        element={
+          <ProtectedRoute>
+            <BuyersLibraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/form-builder"
+        element={
+          <ProtectedRoute>
+            <FormBuilderPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Redirect root to dashboard or login */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
+      {/* Catch-all redirect */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
