@@ -63,6 +63,7 @@ const FullScreenHeader = ({
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b">
                   <div className="flex items-center gap-2">
