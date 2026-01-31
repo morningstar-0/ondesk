@@ -706,6 +706,7 @@ const ProductDetailPage = () => {
                   measurements={formData.measurements || []}
                   onChange={(measurements) => setFormData({ ...formData, measurements })}
                   sizes={sizes}
+                  pomList={pomList}
                 />
               </TabsContent>
 
