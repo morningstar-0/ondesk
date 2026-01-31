@@ -51,6 +51,7 @@ const AssetDetailPage = () => {
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const [newTag, setNewTag] = useState('');
 
   const fetchAsset = useCallback(async () => {
@@ -68,18 +69,20 @@ const AssetDetailPage = () => {
 
   const fetchLibraries = useCallback(async () => {
     try {
-      const [divisionsRes, typesRes, colorsRes, sizesRes, suppliersRes] = await Promise.all([
+      const [divisionsRes, typesRes, colorsRes, sizesRes, suppliersRes, materialsRes] = await Promise.all([
         api.get('/divisions'),
         api.get('/product-types'),
         api.get('/colors'),
         api.get('/sizes'),
-        api.get('/suppliers')
+        api.get('/suppliers'),
+        api.get('/materials')
       ]);
       setDivisions(divisionsRes.data);
       setProductTypes(typesRes.data);
       setColors(colorsRes.data);
       setSizes(sizesRes.data);
       setSuppliers(suppliersRes.data);
+      setMaterials(materialsRes.data);
     } catch (error) {
       console.error('Failed to fetch libraries:', error);
     }
