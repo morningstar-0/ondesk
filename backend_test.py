@@ -482,6 +482,99 @@ class AssetProductAPITester:
         )
         
         return success
+    def test_materials_crud(self):
+        """Test Materials Library CRUD operations"""
+        # Create material
+        material_data = {
+            "code": "MAT-001",
+            "name": "Test Cotton Fabric",
+            "description": "High quality cotton fabric",
+            "division_id": "",
+            "material_type": "fabric",
+            "composition": "100% Cotton",
+            "weight": "200gsm",
+            "width": "150cm",
+            "supplier_id": "",
+            "unit_price": 15.50,
+            "unit": "meter",
+            "color_ids": [],
+            "tags": ["cotton", "fabric"],
+            "certifications": ["OEKO-TEX"],
+            "custom_fields": {},
+            "status": "active",
+            "primary_image_url": "",
+            "media": []
+        }
+        
+        success, response = self.run_test(
+            "Create Material",
+            "POST",
+            "materials",
+            200,
+            data=material_data
+        )
+        
+        if not success:
+            return False
+            
+        material_id = response.get('id')
+        
+        # Get materials
+        success, _ = self.run_test(
+            "Get Materials",
+            "GET",
+            "materials",
+            200
+        )
+        
+        if not success:
+            return False
+            
+        # Get single material
+        success, _ = self.run_test(
+            "Get Single Material",
+            "GET",
+            f"materials/{material_id}",
+            200
+        )
+        
+        if not success:
+            return False
+            
+        # Update material
+        update_data = {
+            "code": "MAT-001-UPD",
+            "name": "Updated Cotton Fabric",
+            "description": "Updated high quality cotton fabric",
+            "division_id": "",
+            "material_type": "fabric",
+            "composition": "100% Organic Cotton",
+            "weight": "220gsm",
+            "width": "150cm",
+            "supplier_id": "",
+            "unit_price": 18.00,
+            "unit": "meter",
+            "color_ids": [],
+            "tags": ["organic", "cotton", "fabric"],
+            "certifications": ["OEKO-TEX", "GOTS"],
+            "custom_fields": {},
+            "status": "active",
+            "primary_image_url": "",
+            "media": []
+        }
+        
+        success, _ = self.run_test(
+            "Update Material",
+            "PUT",
+            f"materials/{material_id}",
+            200,
+            data=update_data
+        )
+        
+        # Clean up
+        self.run_test(f"Delete Material {material_id}", "DELETE", f"materials/{material_id}", 200)
+        
+        return success
 
     def test_convert_asset_to_product(self):
         """Test converting asset to product"""
