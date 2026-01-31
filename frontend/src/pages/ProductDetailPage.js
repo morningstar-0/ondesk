@@ -13,7 +13,8 @@ import { Separator } from '../components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
 import MediaUploadPanel from '../components/MediaUploadPanel';
-import { ArrowLeft, Save, Trash2, Upload, Image, ExternalLink, Plus, X, Barcode } from 'lucide-react';
+import FullScreenHeader from '../components/FullScreenHeader';
+import { Save, Trash2, Upload, Image, Plus, X, Barcode } from 'lucide-react';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
